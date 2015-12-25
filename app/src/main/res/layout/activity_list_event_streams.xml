@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.design.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:background="@color/bioscope_teal"
+    tools:context="com.example.johny.bioscopetvnew.ListEventStreamsActivity">
+
+    <include layout="@layout/content_list_event_streams" />
+
+</android.support.design.widget.CoordinatorLayout>
