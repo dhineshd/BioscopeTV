@@ -89,6 +89,14 @@ public class MainActivity extends AppCompatActivity {
                         .show();
             }
         });
+
+        Button refreshButton = (Button) findViewById(R.id.button_refresh_events);
+        refreshButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                refreshListOfEvents();
+            }
+        });
     }
 
     @Override
@@ -150,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
                     final BroadcastEvent selectedEvent = events.get(position);
 
                     new AlertDialog.Builder(MainActivity.this)
-                            .setTitle("Broadcast action")
+                            .setTitle("Select action")
                             .setPositiveButton("View", new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialog, int which) {
                                     Intent intent = new Intent(MainActivity.this, ListEventStreamsActivity.class);
@@ -158,9 +166,9 @@ public class MainActivity extends AppCompatActivity {
                                     startActivity(intent);
                                 }
                             })
-                            .setNegativeButton("Join", new DialogInterface.OnClickListener() {
+                            .setNegativeButton("Broadcast", new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialog, int which) {
-                                    startBroadcast(selectedEvent.eventId);
+                                    startBroadcast(selectedEvent);
                                 }
                             })
                             .show();
@@ -239,12 +247,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void startBroadcast(final String eventId) {
+    private void startBroadcast(final BroadcastEvent event) {
         String outputLocation = new File(getApplicationContext().getFilesDir(), "index.m3u8").getAbsolutePath();
         Kickflip.setSessionConfig(new SessionConfig.Builder(outputLocation)
                 .withVideoBitrate(300 * 1000)
+                //.withAudioBitrate()
                 .withPrivateVisibility(false)
                 .withLocation(true)
+                .withTitle(event.eventName)
                 .withVideoResolution(640, 360)
                 .withAdaptiveStreaming(true)
                 .build());
@@ -258,7 +268,7 @@ public class MainActivity extends AppCompatActivity {
             public void onBroadcastLive(Stream stream) {
                 Log.i(TAG, "BroadcastLive @ " + stream.getKickflipUrl());
                 Log.i(TAG, "Stream URL :" + stream.getStreamUrl());
-                new CreateEventStreamTask().execute(eventId, stream.getStreamUrl());
+                new CreateEventStreamTask().execute(event.eventId, stream.getStreamUrl());
             }
 
             @Override

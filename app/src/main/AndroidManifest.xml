@@ -24,14 +24,14 @@
         </activity>
         <activity
             android:name="io.kickflip.sdk.activity.BroadcastActivity"
-            android:screenOrientation="landscape" />
+            android:screenOrientation="portrait" />
         <activity
             android:name="io.kickflip.sdk.activity.MediaPlayerActivity"
             android:screenOrientation="landscape" />
         <activity
             android:name=".ListEventStreamsActivity"
             android:label="@string/title_activity_list_event_streams"
-            android:theme="@style/AppTheme.NoActionBar" />
+            android:theme="@style/AppTheme" />
         <activity
             android:name=".ViewStreamActivity"
             android:label="@string/title_activity_view_stream"

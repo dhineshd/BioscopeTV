@@ -17,4 +17,11 @@
         android:layout_height="wrap_content"
         android:id="@+id/listview_event_streams"/>
 
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Refresh"
+        android:layout_alignParentBottom="true"
+        android:id="@+id/button_refresh_streams"/>
+
 </RelativeLayout>

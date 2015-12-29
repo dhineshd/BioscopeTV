@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.VideoView;
@@ -54,14 +55,24 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         eventId = intent.getStringExtra(EVENT_ID_KEY);
 
         initializeClient();
+
+        Button refreshButton = (Button) findViewById(R.id.button_refresh_streams);
+        refreshButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                refreshListOfEventStreams();
+            }
+        });
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        refreshListOfEventStreams();
+    }
 
+    private void refreshListOfEventStreams() {
         new ListEventStreamsTask().execute();
-
     }
 
     private void initializeClient() {
@@ -152,9 +163,10 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 }
 
                 final String streamInfo = "Stream created by \n" + eventStream.getCreator() +
-                        "\nat " + new Date(eventStream.getTimestampMs());
+                        "\nat " + new Date(eventStream.getTimestampMs()) + "\n";
+                final String streamStatus = "Checking status..";
                 viewHolder.streamInfo.setTextColor(Color.WHITE);
-                viewHolder.streamInfo.setText(streamInfo);
+                viewHolder.streamInfo.setText(streamInfo + streamStatus);
                 viewHolder.streamVideo.setVideoURI(Uri.parse(URLDecoder.decode(eventStream.getEncodedUrl(), "UTF-8")));
                 viewHolder.streamVideo.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
                     @Override
@@ -163,8 +175,10 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                         Log.i(TAG, "Track duration = " + mp.getDuration());
                         if (mp.getDuration() <= 0) {
                             viewHolder.streamInfo.setTextColor(Color.RED);
-                            viewHolder.streamInfo.setText(streamInfo + "\nLIVE!");
+                            viewHolder.streamInfo.setText(streamInfo + "LIVE!");
                             viewHolder.streamVideo.start();
+                        } else {
+                            viewHolder.streamInfo.setText(streamInfo);
                         }
                     }
                 });
