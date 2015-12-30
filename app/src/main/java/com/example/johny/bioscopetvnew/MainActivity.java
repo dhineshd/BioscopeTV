@@ -258,7 +258,7 @@ public class MainActivity extends AppCompatActivity {
                 .withVideoResolution(640, 360)
                 .withAdaptiveStreaming(true)
                 .build());
-        Kickflip.startBroadcastActivity(this, new BroadcastListener() {
+        BroadcastListener broadcastListener = new BroadcastListener() {
             @Override
             public void onBroadcastStart() {
 
@@ -280,7 +280,9 @@ public class MainActivity extends AppCompatActivity {
             public void onBroadcastError(KickflipException e) {
 
             }
-        });
+        };
+        Kickflip.setBroadcastListener(broadcastListener);
+        startActivity(new Intent(MainActivity.this, StartBroadcastActivity.class));
     }
 
     class CreateEventStreamTask extends AsyncTask<String, Void, String> {

@@ -2,4 +2,5 @@
     <string name="app_name">BioscopeTVNew</string>
     <string name="title_activity_list_event_streams">ListEventStreamsActivity</string>
     <string name="title_activity_view_stream">ViewStreamActivity</string>
+    <string name="title_activity_start_broadcast">StartBroadcastActivity</string>
 </resources>
