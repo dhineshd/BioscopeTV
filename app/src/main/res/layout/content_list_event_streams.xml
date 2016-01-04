@@ -12,16 +12,34 @@
     tools:context="com.example.johny.bioscopetvnew.ListEventStreamsActivity"
     tools:showIn="@layout/activity_list_event_streams">
 
-    <ListView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/listview_event_streams"/>
+        android:orientation="vertical"
+        android:layout_margin="5dp">
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Refresh"
-        android:layout_alignParentBottom="true"
-        android:id="@+id/button_refresh_streams"/>
+        <VideoView
+            android:layout_width="480dp"
+            android:layout_height="270dp"
+            android:id="@+id/videoview_view_stream"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Available live streams" />
+
+        <ListView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/listview_event_streams" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Refresh"
+            android:id="@+id/button_refresh_streams"/>
+
+    </LinearLayout>
+
 
 </RelativeLayout>

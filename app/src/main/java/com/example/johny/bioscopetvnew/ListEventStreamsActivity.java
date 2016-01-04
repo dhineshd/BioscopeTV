@@ -29,10 +29,13 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class ListEventStreamsActivity extends AppCompatActivity {
     public static final String EVENT_ID_KEY = "EVENT_ID";
@@ -44,6 +47,9 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private String eventId;
 
     private Gson gson = new Gson();
+    private VideoView videoView;
+    private EventStreamListAdapter eventStreamListAdapter;
+    private Set<BroadcastEventStream> liveStreams = new HashSet<>();
 
     private BioscopeBroadcastService serviceClient;
     @Override
@@ -63,12 +69,44 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 refreshListOfEventStreams();
             }
         });
+
+        videoView = (VideoView) findViewById(R.id.videoview_view_stream);
+
+        eventStreamListAdapter = new EventStreamListAdapter(getApplicationContext());
+        ListView listViewEventStreams = (ListView) findViewById(R.id.listview_event_streams);
+        listViewEventStreams.setAdapter(eventStreamListAdapter);
+        listViewEventStreams.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                final BroadcastEventStream selectedEventStream = eventStreamListAdapter.getItem(position);
+
+                Log.i(TAG, "Selected stream URL = " + selectedEventStream.getEncodedUrl());
+                try {
+                    videoView.setVideoURI(Uri.parse(URLDecoder.decode(selectedEventStream.getEncodedUrl(), "UTF-8")));
+                    videoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                        @Override
+                        public void onPrepared(MediaPlayer mp) {
+                            mp.setOnBufferingUpdateListener(new MediaPlayer.OnBufferingUpdateListener() {
+                                @Override
+                                public void onBufferingUpdate(MediaPlayer mp, int percent) {
+                                    Log.i(TAG, "Buffering update % = " + percent);
+                                }
+                            });
+                        }
+                    });
+                    videoView.start();
+                } catch (UnsupportedEncodingException e) {
+                    Log.e(TAG, "Failed to decode encoded URL");
+                }
+            }
+        });
+
+        refreshListOfEventStreams();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        refreshListOfEventStreams();
     }
 
     private void refreshListOfEventStreams() {
@@ -102,9 +140,11 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
                 Log.i(TAG, "Received ListEventStreams response = " + response);
 
-                return gson.fromJson(response,
+                List<BroadcastEventStream> streams =  gson.fromJson(response,
                         new TypeToken<List<BroadcastEventStream>>() {
                         }.getType());
+
+                return streams;
             } catch (Exception e) {
                 Log.e(TAG, "Failed to list events", e);
                 return Collections.EMPTY_LIST;
@@ -114,37 +154,39 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(final List<BroadcastEventStream> eventStreams) {
 
-            ListView listViewEventStreams = (ListView) findViewById(R.id.listview_event_streams);
-            EventStreamListAdapter adapter = new EventStreamListAdapter(getApplicationContext(), eventStreams);
-            listViewEventStreams.setAdapter(adapter);
-            listViewEventStreams.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                @Override
-                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    final BroadcastEventStream selectedEventStream = eventStreams.get(position);
-
-                    Log.i(TAG, "Selected stream URL = " + selectedEventStream.getEncodedUrl());
-
-//                    try {
-//                        Kickflip.startMediaPlayerActivity(ListEventStreamsActivity.this,
-//                                URLDecoder.decode(selectedEventStream.url, "UTF-8"), false);
-//
-//                    } catch (UnsupportedEncodingException e) {
-//                        Log.e(TAG, "Failed to decode stream URL", e);
-//                    }
-
-                    Intent intent = new Intent(ListEventStreamsActivity.this, ViewStreamActivity.class);
-                    intent.putExtra(ViewStreamActivity.STREAM_INFO_KEY, gson.toJson(selectedEventStream));
-                    startActivity(intent);
+            for (final BroadcastEventStream stream : eventStreams) {
+                if (stream != null) {
+                    try {
+                        MediaPlayer mp = new MediaPlayer();
+                        mp.setDataSource(URLDecoder.decode(stream.getEncodedUrl(), "UTF-8"));
+                        mp.prepare();
+                        if (mp.getDuration() <= 0) {
+                            eventStreamListAdapter.add(stream);
+                            Log.i(TAG, "Found live stream : URL = " + stream.getEncodedUrl());
+                        } else {
+                            Log.i(TAG, "Found non-live stream : URL = " + stream.getEncodedUrl());
+                        }
+                        mp.release();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
                 }
-            });
-
+            }
         }
     }
 
     private class EventStreamListAdapter extends ArrayAdapter<BroadcastEventStream> {
-        public EventStreamListAdapter(Context context, List<BroadcastEventStream> objects) {
-            super(context, 0, objects);
+        public EventStreamListAdapter(Context context) {
+            super(context, 0);
         }
+
+        @Override
+        public void add(BroadcastEventStream object) {
+            // TODO : Avoid duplicates
+            super.add(object);
+            notifyDataSetChanged();
+        }
+
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
@@ -164,22 +206,14 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
                 final String streamInfo = "Stream created by \n" + eventStream.getCreator() +
                         "\nat " + new Date(eventStream.getTimestampMs()) + "\n";
-                final String streamStatus = "Checking status..";
-                viewHolder.streamInfo.setTextColor(Color.WHITE);
-                viewHolder.streamInfo.setText(streamInfo + streamStatus);
+                viewHolder.streamInfo.setTextColor(Color.RED);
+                viewHolder.streamInfo.setText(streamInfo);
                 viewHolder.streamVideo.setVideoURI(Uri.parse(URLDecoder.decode(eventStream.getEncodedUrl(), "UTF-8")));
                 viewHolder.streamVideo.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
                     @Override
                     public void onPrepared(MediaPlayer mp) {
                         mp.setVolume(0f, 0f);
-                        Log.i(TAG, "Track duration = " + mp.getDuration());
-                        if (mp.getDuration() <= 0) {
-                            viewHolder.streamInfo.setTextColor(Color.RED);
-                            viewHolder.streamInfo.setText(streamInfo + "LIVE!");
-                            viewHolder.streamVideo.start();
-                        } else {
-                            viewHolder.streamInfo.setText(streamInfo);
-                        }
+                        mp.start();
                     }
                 });
 
