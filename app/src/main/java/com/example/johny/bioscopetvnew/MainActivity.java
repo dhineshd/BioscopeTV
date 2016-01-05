@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -48,10 +49,14 @@ public class MainActivity extends AppCompatActivity {
     private static final String CLIENT_SECRET = "@E=FJIv8Tkmp8AG@Vh;e1QE!Msku-uVh?=hmguvStuVKW59sRx_HIJrDla=eDx8GsWBav=l8_sZ31hPz6qjKFRTdpKD@3SoX?;cqUn8trkxnnD;A6gIuuvD:0C466Gwx";
     private static final String TAG = "MainActivity";
     public static final String ROOT_URL = "https://bioscope-b2074.appspot.com/_ah/api";
-
+    private static final long REFRESH_INTERVAL_MS = 60000;
+    private static final long REFRESH_CHECK_INTERVAL_MS = 20000;
+    private long latestUserInteractionTimestampMs;
+    private Handler refreshHandler;
+    private Runnable refreshRunnable;
     private Gson gson = new Gson();
-
     private BioscopeBroadcastService serviceClient;
+    private AsyncTask listEventsTask;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
                         .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int which) {
                                 String eventName = input.getText().toString();
-                                new CreateEventTask().execute(eventName);
+                                new CreateEventTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, eventName);
                             }
                         })
                         .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -90,24 +95,65 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        Button refreshButton = (Button) findViewById(R.id.button_refresh_events);
-        refreshButton.setOnClickListener(new View.OnClickListener() {
+        // Refresh list periodically
+        refreshHandler = new Handler();
+        refreshRunnable = new Runnable() {
             @Override
-            public void onClick(View v) {
+            public void run() {
                 refreshListOfEvents();
+                refreshHandler.postDelayed(this, REFRESH_CHECK_INTERVAL_MS);
             }
-        });
+        };
+        refreshHandler.post(refreshRunnable);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+    }
+    
+    @Override
+    public void onUserInteraction() {
+        super.onUserInteraction();
+        latestUserInteractionTimestampMs = System.currentTimeMillis();
+    }
 
-        refreshListOfEvents();
+    @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        if (System.currentTimeMillis() - latestUserInteractionTimestampMs < 10) {
+            Log.i(TAG, "Detected that user is leaving..");
+            cleanup();
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        cleanup();
+    }
+
+    private void cleanup() {
+        Log.i(TAG, "Performing cleanup..");
+
+        if (listEventsTask != null) {
+            listEventsTask.cancel(true);
+        }
+        if (refreshHandler != null) {
+            refreshHandler.removeCallbacks(refreshRunnable);
+        }
     }
 
     private void refreshListOfEvents() {
-        new ListEventsTask().execute();
+        if (listEventsTask != null) {
+            listEventsTask.cancel(true);
+        }
+        listEventsTask = new ListEventsTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     private void initializeClient() {
@@ -256,8 +302,10 @@ public class MainActivity extends AppCompatActivity {
                 .withLocation(true)
                 .withTitle(event.eventName)
                 .withVideoResolution(640, 360)
+                .withVerticalVideoCorrection(true)
                 .withAdaptiveStreaming(true)
                 .build());
+
         BroadcastListener broadcastListener = new BroadcastListener() {
             @Override
             public void onBroadcastStart() {

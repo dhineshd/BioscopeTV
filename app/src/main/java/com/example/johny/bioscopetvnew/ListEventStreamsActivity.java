@@ -2,11 +2,11 @@ package com.example.johny.bioscopetvnew;
 
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -14,8 +14,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.ListView;
+import android.widget.GridView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.VideoView;
 
@@ -32,24 +32,32 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.Collections;
-import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class ListEventStreamsActivity extends AppCompatActivity {
     public static final String EVENT_ID_KEY = "EVENT_ID";
-
-    private static final String CLIENT_ID = "qXKng;GQRIjCHE3@nKvviEjcI31_8lkRDc0-?ci6";
-    private static final String CLIENT_SECRET = "@E=FJIv8Tkmp8AG@Vh;e1QE!Msku-uVh?=hmguvStuVKW59sRx_HIJrDla=eDx8GsWBav=l8_sZ31hPz6qjKFRTdpKD@3SoX?;cqUn8trkxnnD;A6gIuuvD:0C466Gwx";
     private static final String TAG = "ListEventStreams";
+    private static final long REFRESH_INTERVAL_MS = 60000;
+    private static final long REFRESH_CHECK_INTERVAL_MS = 20000;
+
+    private long latestUserInteractionTimestampMs;
+    private Handler refreshHandler;
+    private Runnable refreshRunnable;
 
     private String eventId;
 
     private Gson gson = new Gson();
     private VideoView videoView;
+    private ProgressBar progressBar;
     private EventStreamListAdapter eventStreamListAdapter;
     private Set<BroadcastEventStream> liveStreams = new HashSet<>();
+    private AsyncTask listStreamsTask;
+    private Map<BroadcastEventStream, Long> eventLatestRefreshTimeMs = new HashMap<>();
+    private BroadcastEventStream mainEventStream;
 
     private BioscopeBroadcastService serviceClient;
     @Override
@@ -62,60 +70,115 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
         initializeClient();
 
-        Button refreshButton = (Button) findViewById(R.id.button_refresh_streams);
-        refreshButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                refreshListOfEventStreams();
-            }
-        });
-
         videoView = (VideoView) findViewById(R.id.videoview_view_stream);
 
+        progressBar = (ProgressBar) findViewById(R.id.progressbar_view_stream);
+
         eventStreamListAdapter = new EventStreamListAdapter(getApplicationContext());
-        ListView listViewEventStreams = (ListView) findViewById(R.id.listview_event_streams);
+        GridView listViewEventStreams = (GridView) findViewById(R.id.listview_event_streams);
         listViewEventStreams.setAdapter(eventStreamListAdapter);
         listViewEventStreams.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                final BroadcastEventStream selectedEventStream = eventStreamListAdapter.getItem(position);
-
-                Log.i(TAG, "Selected stream URL = " + selectedEventStream.getEncodedUrl());
-                try {
-                    videoView.setVideoURI(Uri.parse(URLDecoder.decode(selectedEventStream.getEncodedUrl(), "UTF-8")));
-                    videoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                        @Override
-                        public void onPrepared(MediaPlayer mp) {
-                            mp.setOnBufferingUpdateListener(new MediaPlayer.OnBufferingUpdateListener() {
-                                @Override
-                                public void onBufferingUpdate(MediaPlayer mp, int percent) {
-                                    Log.i(TAG, "Buffering update % = " + percent);
-                                }
-                            });
-                        }
-                    });
-                    videoView.start();
-                } catch (UnsupportedEncodingException e) {
-                    Log.e(TAG, "Failed to decode encoded URL");
-                }
+            public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
+                playStreamAsMainVideo(eventStreamListAdapter.getItem(position));
             }
         });
 
-        refreshListOfEventStreams();
+        // Refresh list periodically
+        refreshHandler = new Handler();
+        refreshRunnable = new Runnable() {
+            @Override
+            public void run() {
+                refreshListOfEventStreams();
+                refreshHandler.postDelayed(this, REFRESH_CHECK_INTERVAL_MS);
+            }
+        };
+    }
+
+    private void playStreamAsMainVideo(final BroadcastEventStream stream) {
+        Log.i(TAG, "Selected stream URL = " + stream.getEncodedUrl());
+        mainEventStream = stream;
+        try {
+            videoView.setVideoURI(Uri.parse(URLDecoder.decode(stream.getEncodedUrl(), "UTF-8")));
+            videoView.setOnInfoListener(new MediaPlayer.OnInfoListener() {
+                @Override
+                public boolean onInfo(MediaPlayer mp, int what, int extra) {
+                    if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) {
+                        progressBar.setVisibility(View.VISIBLE);
+                        Log.i(TAG, "Buffering just started!");
+                    } else if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
+                        Log.i(TAG, "Received first video frame!");
+                        progressBar.setVisibility(View.GONE);
+                    }
+                    //viewHolder.progressBar.setVisibility(mp.isPlaying()? View.INVISIBLE : View.VISIBLE);
+                    return true;
+                }
+            });
+
+            videoView.start();
+        } catch (UnsupportedEncodingException e) {
+            Log.e(TAG, "Failed to decode encoded URL");
+        }
     }
 
     @Override
     protected void onResume() {
+        Log.i(TAG, "onResume invoked!");
         super.onResume();
+        refreshHandler.post(refreshRunnable);
+    }
+
+    @Override
+    protected void onPause() {
+        Log.i(TAG, "onPause invoked!");
+        super.onPause();
+        refreshHandler.removeCallbacks(refreshRunnable);
+    }
+
+    @Override
+    public void onUserInteraction() {
+        super.onUserInteraction();
+        latestUserInteractionTimestampMs = System.currentTimeMillis();
+    }
+
+    @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        if (System.currentTimeMillis() - latestUserInteractionTimestampMs < 10) {
+            Log.i(TAG, "Detected that user is leaving..");
+            cleanup();
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        cleanup();
+    }
+
+    private void cleanup() {
+        Log.i(TAG, "Performing cleanup..");
+
+        if (listStreamsTask != null) {
+            listStreamsTask.cancel(true);
+        }
+        if (refreshHandler != null) {
+            refreshHandler.removeCallbacks(refreshRunnable);
+        }
     }
 
     private void refreshListOfEventStreams() {
-        new ListEventStreamsTask().execute();
+        // Cancel any running tasks
+        if (listStreamsTask != null) {
+            listStreamsTask.cancel(true);
+        }
+        listStreamsTask = new ListEventStreamsTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     private void initializeClient() {
         if(serviceClient == null) {  // Only do this once
-            BioscopeBroadcastService.Builder builder = new BioscopeBroadcastService.Builder(AndroidHttp.newCompatibleTransport(),
+            BioscopeBroadcastService.Builder builder =
+                    new BioscopeBroadcastService.Builder(AndroidHttp.newCompatibleTransport(),
                     new AndroidJsonFactory(), null)
                     .setRootUrl(MainActivity.ROOT_URL)
                     .setGoogleClientRequestInitializer(new GoogleClientRequestInitializer() {
@@ -137,14 +200,31 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
             try {
                 String response = serviceClient.listEventStreams(eventId).execute().getData();
-
                 Log.i(TAG, "Received ListEventStreams response = " + response);
-
-                List<BroadcastEventStream> streams =  gson.fromJson(response,
+                List<BroadcastEventStream> eventStreams =  gson.fromJson(response,
                         new TypeToken<List<BroadcastEventStream>>() {
                         }.getType());
 
-                return streams;
+                MediaPlayer mp = new MediaPlayer();
+                for (final BroadcastEventStream stream : eventStreams) {
+                    if (stream != null) {
+                        try {
+                            mp.setDataSource(URLDecoder.decode(stream.getEncodedUrl(), "UTF-8"));
+                            mp.prepare();
+                            // Check if live stream
+                            if (mp.getDuration() < 0) {
+                                eventStreamListAdapter.add(stream);
+                                Log.i(TAG, "Found live stream : URL = " + stream.getEncodedUrl());
+                            }
+                            mp.reset();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
+                mp.release();
+
+                return eventStreams;
             } catch (Exception e) {
                 Log.e(TAG, "Failed to list events", e);
                 return Collections.EMPTY_LIST;
@@ -154,24 +234,6 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(final List<BroadcastEventStream> eventStreams) {
 
-            for (final BroadcastEventStream stream : eventStreams) {
-                if (stream != null) {
-                    try {
-                        MediaPlayer mp = new MediaPlayer();
-                        mp.setDataSource(URLDecoder.decode(stream.getEncodedUrl(), "UTF-8"));
-                        mp.prepare();
-                        if (mp.getDuration() <= 0) {
-                            eventStreamListAdapter.add(stream);
-                            Log.i(TAG, "Found live stream : URL = " + stream.getEncodedUrl());
-                        } else {
-                            Log.i(TAG, "Found non-live stream : URL = " + stream.getEncodedUrl());
-                        }
-                        mp.release();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-            }
         }
     }
 
@@ -182,11 +244,18 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
         @Override
         public void add(BroadcastEventStream object) {
-            // TODO : Avoid duplicates
-            super.add(object);
-            notifyDataSetChanged();
+            if (!liveStreams.contains(object)) {
+                liveStreams.add(object);
+                super.add(object);
+                if (liveStreams.size() == 1) {
+                    playStreamAsMainVideo(object);
+                }
+            } else {
+                notifyDataSetChanged();
+            }
         }
 
+        // TODO : Remove?
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {
@@ -203,20 +272,38 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 } else {
                     viewHolder = (ViewHolder) convertView.getTag();
                 }
-
-                final String streamInfo = "Stream created by \n" + eventStream.getCreator() +
-                        "\nat " + new Date(eventStream.getTimestampMs()) + "\n";
-                viewHolder.streamInfo.setTextColor(Color.RED);
-                viewHolder.streamInfo.setText(streamInfo);
-                viewHolder.streamVideo.setVideoURI(Uri.parse(URLDecoder.decode(eventStream.getEncodedUrl(), "UTF-8")));
-                viewHolder.streamVideo.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                    @Override
-                    public void onPrepared(MediaPlayer mp) {
-                        mp.setVolume(0f, 0f);
-                        mp.start();
-                    }
-                });
-
+                if (eventStream.equals(mainEventStream)) {
+                    viewHolder.streamVideo.setBackground(getDrawable(R.drawable.rectangle));
+                } else {
+                    viewHolder.streamVideo.setBackground(null);
+                }
+                Long latestRefreshTimeMs = eventLatestRefreshTimeMs.get(eventStream);
+                if (latestRefreshTimeMs == null || (System.currentTimeMillis() - latestRefreshTimeMs > REFRESH_INTERVAL_MS)) {
+                    eventLatestRefreshTimeMs.put(eventStream, System.currentTimeMillis());
+                    viewHolder.streamVideo.setVideoURI(Uri.parse(URLDecoder.decode(eventStream.getEncodedUrl(), "UTF-8")));
+                    viewHolder.streamVideo.setOnInfoListener(new MediaPlayer.OnInfoListener() {
+                        @Override
+                        public boolean onInfo(MediaPlayer mp, int what, int extra) {
+                            if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) {
+                                viewHolder.progressBar.setVisibility(View.VISIBLE);
+                                Log.i(TAG, "Buffering just started!");
+                            } else if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
+                                Log.i(TAG, "Received first video frame!");
+                                viewHolder.progressBar.setVisibility(View.GONE);
+                                mp.pause();
+                            }
+                            return true;
+                        }
+                    });
+                    viewHolder.streamVideo.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                        @Override
+                        public void onPrepared(MediaPlayer mp) {
+                            Log.i(TAG, "OnPrepared completed!");
+                            mp.setVolume(0f, 0f);
+                        }
+                    });
+                    viewHolder.streamVideo.start();
+                }
             } catch (Exception e) {
                 Log.w(TAG, "Failed to load view for position = " + position);
             }
@@ -226,8 +313,9 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
         private ViewHolder createViewHolder(final View view) {
             ViewHolder viewHolder = new ViewHolder();
-            viewHolder.streamInfo = (TextView) view.findViewById(R.id.list_item_event_stream_textview);
+            //viewHolder.streamInfo = (TextView) view.findViewById(R.id.list_item_event_stream_textview);
             viewHolder.streamVideo = (VideoView) view.findViewById(R.id.list_item_event_stream_videoview);
+            viewHolder.progressBar = (ProgressBar) view.findViewById(R.id.list_item_event_stream_progressbar);
             return viewHolder;
         }
     }
@@ -236,6 +324,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private static class ViewHolder {
         TextView streamInfo;
         VideoView streamVideo;
+        ProgressBar progressBar;
     }
 
 }

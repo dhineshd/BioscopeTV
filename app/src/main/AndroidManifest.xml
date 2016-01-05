@@ -24,15 +24,12 @@
         </activity>
         <activity
             android:name=".ListEventStreamsActivity"
-            android:label="@string/title_activity_list_event_streams" />
-        <activity
-            android:name=".ViewStreamActivity"
-            android:label="@string/title_activity_view_stream" />
+            android:label="@string/title_activity_list_event_streams"
+            android:screenOrientation="landscape"/>
         <activity
             android:name=".StartBroadcastActivity"
-            android:screenOrientation="portrait"
             android:label="@string/title_activity_start_broadcast"
-            android:theme="@style/AppTheme"></activity>
+            android:screenOrientation="landscape" />
     </application>
 
 </manifest>
