@@ -42,7 +42,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     public static final String EVENT_ID_KEY = "EVENT_ID";
     private static final String TAG = "ListEventStreams";
     private static final long REFRESH_INTERVAL_MS = 60000;
-    private static final long REFRESH_CHECK_INTERVAL_MS = 20000;
+    private static final long REFRESH_CHECK_INTERVAL_MS = 30000;
 
     private long latestUserInteractionTimestampMs;
     private Handler refreshHandler;
@@ -98,6 +98,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private void playStreamAsMainVideo(final BroadcastEventStream stream) {
         Log.i(TAG, "Selected stream URL = " + stream.getEncodedUrl());
         mainEventStream = stream;
+        eventStreamListAdapter.notifyDataSetChanged();
         try {
             videoView.setVideoURI(Uri.parse(URLDecoder.decode(stream.getEncodedUrl(), "UTF-8")));
             videoView.setOnInfoListener(new MediaPlayer.OnInfoListener() {
@@ -212,9 +213,14 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                             mp.setDataSource(URLDecoder.decode(stream.getEncodedUrl(), "UTF-8"));
                             mp.prepare();
                             // Check if live stream
-                            if (mp.getDuration() < 0) {
-                                eventStreamListAdapter.add(stream);
-                                Log.i(TAG, "Found live stream : URL = " + stream.getEncodedUrl());
+                            if (mp.getDuration() <= 0) {
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        eventStreamListAdapter.add(stream);
+                                        Log.i(TAG, "Found live stream : URL = " + stream.getEncodedUrl());
+                                    }
+                                });
                             }
                             mp.reset();
                         } catch (IOException e) {
@@ -246,16 +252,16 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         public void add(BroadcastEventStream object) {
             if (!liveStreams.contains(object)) {
                 liveStreams.add(object);
-                super.add(object);
                 if (liveStreams.size() == 1) {
+                    ProgressBar progressBar = (ProgressBar) findViewById(R.id.progressbar_loading_streams);
+                    progressBar.setVisibility(View.GONE);
                     playStreamAsMainVideo(object);
                 }
+                super.add(object);
             } else {
                 notifyDataSetChanged();
             }
         }
-
-        // TODO : Remove?
 
         @Override
         public View getView(int position, View convertView, ViewGroup parent) {

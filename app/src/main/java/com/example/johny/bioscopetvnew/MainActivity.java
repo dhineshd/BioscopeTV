@@ -19,6 +19,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -35,7 +36,9 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import io.kickflip.sdk.Kickflip;
 import io.kickflip.sdk.api.json.Stream;
@@ -57,6 +60,8 @@ public class MainActivity extends AppCompatActivity {
     private Gson gson = new Gson();
     private BioscopeBroadcastService serviceClient;
     private AsyncTask listEventsTask;
+    private Set<BroadcastEvent> events = new HashSet<>();
+    ProgressBar progressBarLoadingEvents;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,6 +71,8 @@ public class MainActivity extends AppCompatActivity {
         Kickflip.setup(this, CLIENT_ID, CLIENT_SECRET);
 
         initializeClient();
+
+        progressBarLoadingEvents = (ProgressBar) findViewById(R.id.progressbar_loading_events);
 
         Button createEventButton = (Button) findViewById(R.id.button_create_event);
         createEventButton.setOnClickListener(new View.OnClickListener() {
@@ -194,6 +201,8 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(final List<BroadcastEvent> events) {
 
+            progressBarLoadingEvents.setVisibility(View.INVISIBLE);
+
             ListView listViewEvents = (ListView) findViewById(R.id.listview_events);
             EventListAdapter adapter = new EventListAdapter(getApplicationContext(), events);
 
@@ -228,6 +237,18 @@ public class MainActivity extends AppCompatActivity {
     private class EventListAdapter extends ArrayAdapter<BroadcastEvent> {
         public EventListAdapter(Context context, List<BroadcastEvent> objects) {
             super(context, 0, objects);
+        }
+
+        @Override
+        public void add(BroadcastEvent object) {
+            if (!events.contains(object)) {
+                events.add(object);
+                ProgressBar progressBar = (ProgressBar) findViewById(R.id.progressbar_loading_events);
+                progressBar.setVisibility(View.GONE);
+                super.add(object);
+            } else {
+                notifyDataSetChanged();
+            }
         }
 
         @Override
@@ -302,7 +323,6 @@ public class MainActivity extends AppCompatActivity {
                 .withLocation(true)
                 .withTitle(event.eventName)
                 .withVideoResolution(640, 360)
-                .withVerticalVideoCorrection(true)
                 .withAdaptiveStreaming(true)
                 .build());
 
