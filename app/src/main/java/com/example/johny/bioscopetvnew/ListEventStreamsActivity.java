@@ -15,6 +15,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.GridView;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.VideoView;
@@ -225,6 +226,14 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                                         Log.i(TAG, "Found live stream : URL = " + stream.getEncodedUrl());
                                     }
                                 });
+                            } else {
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        eventStreamListAdapter.remove(stream);
+                                        Log.i(TAG, "Found live stream : URL = " + stream.getEncodedUrl());
+                                    }
+                                });
                             }
                             mp.reset();
                         } catch (Exception e) {
@@ -233,6 +242,9 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                     }
                 }
                 mp.release();
+
+
+
 
                 return eventStreams;
             } catch (Exception e) {
@@ -268,6 +280,12 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         }
 
         @Override
+        public void remove(BroadcastEventStream object) {
+            liveStreams.remove(object);
+            super.remove(object);
+        }
+
+        @Override
         public View getView(int position, View convertView, ViewGroup parent) {
             try {
                 // Get the data item for this position
@@ -282,13 +300,14 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 } else {
                     viewHolder = (ViewHolder) convertView.getTag();
                 }
+                Uri url = Uri.parse(URLDecoder.decode(eventStream.getEncodedUrl(), "UTF-8"));
                 if (eventStream.equals(mainEventStream)) {
                     viewHolder.streamVideo.setBackground(getDrawable(R.drawable.rectangle));
                 } else {
                     viewHolder.streamVideo.setBackground(null);
                 }
                 if (shouldRefreshThumbnail(eventStream, position)) {
-                    viewHolder.streamVideo.setVideoURI(Uri.parse(URLDecoder.decode(eventStream.getEncodedUrl(), "UTF-8")));
+                    viewHolder.streamVideo.setVideoURI(url);
                     viewHolder.streamVideo.setOnInfoListener(new MediaPlayer.OnInfoListener() {
                         @Override
                         public boolean onInfo(MediaPlayer mp, int what, int extra) {
@@ -317,7 +336,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                     Log.i(TAG, "Skipping thumbnail update for position = " + position);
                 }
             } catch (Exception e) {
-                Log.w(TAG, "Failed to load view for position = " + position);
+                Log.w(TAG, "Failed to load view for position = " + position, e);
             }
 
             return convertView;
@@ -326,6 +345,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         private ViewHolder createViewHolder(final View view) {
             ViewHolder viewHolder = new ViewHolder();
             //viewHolder.streamInfo = (TextView) view.findViewById(R.id.list_item_event_stream_textview);
+            //viewHolder.streamThumbnail = (ImageView) view.findViewById(R.id.list_item_event_stream_imageview);
             viewHolder.streamVideo = (VideoView) view.findViewById(R.id.list_item_event_stream_videoview);
             viewHolder.progressBar = (ProgressBar) view.findViewById(R.id.list_item_event_stream_progressbar);
             return viewHolder;
@@ -343,8 +363,8 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private static class ViewHolder {
         TextView streamInfo;
         VideoView streamVideo;
+        ImageView streamThumbnail;
         ProgressBar progressBar;
-        boolean videoPaused;
     }
 
 }
