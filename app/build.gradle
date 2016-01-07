@@ -6,13 +6,11 @@ android {
 
     defaultConfig {
         applicationId "tv.bioscope.android"
-        minSdkVersion 21
+        minSdkVersion 19
         targetSdkVersion 22
         versionCode 3
         versionName "3.0"
 
-        // Enabling multidex support.
-        multiDexEnabled true
     }
     buildTypes {
         release {
@@ -25,9 +23,10 @@ android {
 dependencies {
     provided 'org.projectlombok:lombok:1.16.2'
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    testCompile 'junit:junit:4.12'
     compile project(':submodules:kickflip-android-sdk:sdk')
-    compile project(path: ':backend', configuration: 'android-endpoints')
+    compile (project(path: ':backend', configuration: 'android-endpoints')) {
+        exclude group: 'com.google.guava'
+    }
     compile 'com.android.support:appcompat-v7:22.2.1'
     compile 'com.android.support:design:22.2.1'
 }
