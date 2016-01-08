@@ -27,6 +27,13 @@
         android:text="Create event"
         android:id="@+id/button_create_event"/>
 
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right"
+            android:text="Settings"
+            android:id="@+id/button_settings"/>
+
     </LinearLayout>
 
     <ProgressBar

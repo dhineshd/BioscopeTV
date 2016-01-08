@@ -4,10 +4,12 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -62,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
     private AsyncTask listEventsTask;
     private Set<BroadcastEvent> events = new HashSet<>();
     ProgressBar progressBarLoadingEvents;
+    Button createEventButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,7 +77,17 @@ public class MainActivity extends AppCompatActivity {
 
         progressBarLoadingEvents = (ProgressBar) findViewById(R.id.progressbar_loading_events);
 
-        Button createEventButton = (Button) findViewById(R.id.button_create_event);
+        Button settingsButton = (Button) findViewById(R.id.button_settings);
+
+        settingsButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, PreferencesActivity.class));
+            }
+        });
+
+        createEventButton = (Button) findViewById(R.id.button_create_event);
+
         createEventButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -122,6 +135,12 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
+        if(!allEventCreation()) {
+            createEventButton.setVisibility(View.INVISIBLE);
+        } else {
+            createEventButton.setVisibility(View.VISIBLE);
+        }
     }
     
     @Override
@@ -212,6 +231,9 @@ public class MainActivity extends AppCompatActivity {
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                     final BroadcastEvent selectedEvent = events.get(position);
 
+
+
+                    AlertDialog.Builder builder =
                     new AlertDialog.Builder(MainActivity.this)
                             .setTitle("Select action")
                             .setPositiveButton("View", new DialogInterface.OnClickListener() {
@@ -220,13 +242,18 @@ public class MainActivity extends AppCompatActivity {
                                     intent.putExtra(ListEventStreamsActivity.EVENT_ID_KEY, selectedEvent.eventId);
                                     startActivity(intent);
                                 }
-                            })
-                            .setNegativeButton("Broadcast", new DialogInterface.OnClickListener() {
-                                public void onClick(DialogInterface dialog, int which) {
-                                    startBroadcast(selectedEvent);
-                                }
-                            })
-                            .show();
+                            });
+
+                    //Show broadcast only when allowEventCreation settings is on
+                    if(allEventCreation()) {
+                        builder .setNegativeButton("Broadcast", new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                startBroadcast(selectedEvent);
+                            }
+                        });
+                    }
+
+                    builder.show();
                 }
             });
 
@@ -378,5 +405,14 @@ public class MainActivity extends AppCompatActivity {
         String eventName;
         String creator;
         long timestampMs;
+    }
+
+    private boolean allEventCreation() {
+
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean allowEventCreation = sharedPref.getBoolean(getString(R.string.pref_alloweventcreation_key), false);
+
+        Log.i(TAG, "Allow Event Creation is " + allowEventCreation);
+        return allowEventCreation;
     }
 }

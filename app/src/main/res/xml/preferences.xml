@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:summary="Preferences for the Bioscope App"
+    android:title="Preferences"
+    >
+
+    <PreferenceCategory
+        android:layout="@layout/preference_category"
+        android:title="@string/pref_cat_title">
+        <SwitchPreference
+            android:key="@string/pref_alloweventcreation_key"
+            android:title="Enable Event Creation"
+            android:defaultValue="false"
+            android:checked="false" />
+        <SwitchPreference
+            android:key="@string/pref_ga_display_features_key"
+            android:title="Google Analytics Display Features"
+            android:defaultValue="true"
+            android:checked="true" />
+        <Preference
+            android:defaultValue=""
+            android:key="@string/pref_version_number_key"
+            android:title="Version Number"
+            />
+    </PreferenceCategory>
+
+</PreferenceScreen>
