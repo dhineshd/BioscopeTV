@@ -57,9 +57,20 @@
                 android:background="@android:color/holo_red_dark"
                 android:textColor="@android:color/white"
                 android:text="Live"
+                android:visibility="invisible"
                 android:layout_gravity="start|top"
                 android:padding="5dp"
                 android:id="@+id/textview_event_status"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="visible"
+                android:layout_gravity="center"
+                android:textColor="@android:color/white"
+                android:textSize="12sp"
+                android:text="Searching for live streams..."
+                android:id="@+id/textview_stream_status"/>
 
             <ProgressBar
                 android:layout_width="wrap_content"

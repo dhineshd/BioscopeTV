@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.bioscope.tv.backend.bioscopeBroadcastService.BioscopeBroadcastService;
 import com.example.johny.bioscopetvnew.com.example.johny.biscopetvnew.types.BroadcastEvent;
@@ -31,6 +32,7 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
 
     private static final String TAG = "StartBroadcastActivity";
     private static final String BROADCAST_FRAGMENT_TAG = "BroadcastFragment";
+    private static final String STREAM_ID_KEY = "STREAM_ID";
 
     private long latestUserInteractionTimestampMs;
 
@@ -63,8 +65,20 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     }
 
     @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (streamId != null) {
+            outState.putString(STREAM_ID_KEY, streamId);
+        }
+        Log.i(TAG, "onSaveInstanceState!");
+    }
+
+    @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
+        if (savedInstanceState.getString(STREAM_ID_KEY) != null) {
+            streamId = savedInstanceState.getString(STREAM_ID_KEY);
+        }
         Log.i(TAG, "onRestoreInstanceState!");
     }
 
@@ -121,12 +135,10 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     private void stopBroadcast() {
         if (mFragment != null) {
             mFragment.stopBroadcasting();
-            new UpdateEventStreamStatusToNotLiveTask().execute(streamId);
             Log.i(TAG, "STOP_BROADCAST : Stopping broadcast..");
         } else {
             Log.i(TAG, "STOP_BROADCAST : Fragment is null");
         }
-        finish();
     }
 
     class UpdateEventStreamStatusToNotLiveTask extends AsyncTask<String, Void, Void> {
@@ -159,6 +171,7 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     @Override
     public void onBroadcastStop() {
         Log.i(TAG, "Broadcast stopped!");
+        new UpdateEventStreamStatusToNotLiveTask().execute(streamId);
         finish();
     }
 

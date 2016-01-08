@@ -52,7 +52,9 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private Gson gson = new Gson();
     private VideoView videoView;
     private TextView textViewEventName;
-    private ProgressBar progressBar;
+    private TextView textViewEventStatus;
+    private TextView textViewStreamSearchStatus;
+    private ProgressBar progressBarMainVideo;
     private EventStreamListAdapter eventStreamListAdapter;
     private Set<BroadcastEventStream> liveStreams = new HashSet<>();
     private AsyncTask listStreamsTask;
@@ -77,7 +79,11 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
         textViewEventName.setText(event.getEventName());
 
-        progressBar = (ProgressBar) findViewById(R.id.progressbar_view_stream);
+        textViewEventStatus = (TextView) findViewById(R.id.textview_event_status);
+
+        textViewStreamSearchStatus = (TextView) findViewById(R.id.textview_stream_status);
+
+        progressBarMainVideo = (ProgressBar) findViewById(R.id.progressbar_view_stream);
 
         eventStreamListAdapter = new EventStreamListAdapter(getApplicationContext());
         GridView listViewEventStreams = (GridView) findViewById(R.id.listview_event_streams);
@@ -110,11 +116,11 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 @Override
                 public boolean onInfo(MediaPlayer mp, int what, int extra) {
                     if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) {
-                        progressBar.setVisibility(View.VISIBLE);
+                        progressBarMainVideo.setVisibility(View.VISIBLE);
                         Log.i(TAG, "Buffering just started!");
                     } else if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
                         Log.i(TAG, "Received first video frame!");
-                        progressBar.setVisibility(View.GONE);
+                        progressBarMainVideo.setVisibility(View.GONE);
                     }
                     //viewHolder.progressBar.setVisibility(mp.isPlaying()? View.INVISIBLE : View.VISIBLE);
                     return true;
@@ -216,32 +222,6 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                         new TypeToken<List<BroadcastEventStream>>() {
                         }.getType());
 
-                // Remove expired streams from view
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        for (BroadcastEventStream liveStream : liveStreams) {
-                            if (!eventStreams.contains(liveStream)) {
-                                eventStreamListAdapter.remove(liveStream);
-                                Log.i(TAG, "Removed non-live stream : streamId = " + liveStream.getStreamId());
-                            }
-                        }
-                    }
-                });
-
-                // Add received streams to view
-                for (final BroadcastEventStream stream : eventStreams) {
-                    if (stream != null) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                eventStreamListAdapter.add(stream);
-                                Log.i(TAG, "Found non-live stream : streamId = " + stream.getStreamId());
-                            }
-                        });
-                    }
-                }
-
                 return eventStreams;
             } catch (Exception e) {
                 Log.e(TAG, "Failed to list event streams", e);
@@ -251,6 +231,27 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(final List<BroadcastEventStream> eventStreams) {
+
+            if (eventStreams != null && !eventStreams.isEmpty()) {
+                textViewStreamSearchStatus.setVisibility(View.INVISIBLE);
+                textViewEventStatus.setVisibility(View.VISIBLE);
+            }
+
+            // Remove expired streams from view
+            for (BroadcastEventStream liveStream : liveStreams) {
+                if (!eventStreams.contains(liveStream)) {
+                    eventStreamListAdapter.remove(liveStream);
+                    Log.i(TAG, "Removed non-live stream : streamId = " + liveStream.getStreamId());
+                }
+            }
+
+            // Add received streams to view
+            for (final BroadcastEventStream stream : eventStreams) {
+                if (stream != null) {
+                    eventStreamListAdapter.add(stream);
+                    Log.i(TAG, "Found non-live stream : streamId = " + stream.getStreamId());
+                }
+            }
 
         }
     }
