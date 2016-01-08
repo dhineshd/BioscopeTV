@@ -36,6 +36,31 @@
 
             </RelativeLayout>
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textStyle="bold"
+                android:textSize="20sp"
+                android:layout_gravity="center|top"
+                android:textColor="@android:color/white"
+                android:shadowColor="@android:color/black"
+                android:shadowDx="2"
+                android:shadowDy="2"
+                android:shadowRadius="2"
+                android:id="@+id/textview_view_stream"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textStyle="bold"
+                android:textSize="20sp"
+                android:background="@android:color/holo_red_dark"
+                android:textColor="@android:color/white"
+                android:text="Live"
+                android:layout_gravity="start|top"
+                android:padding="5dp"
+                android:id="@+id/textview_event_status"/>
+
             <ProgressBar
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
