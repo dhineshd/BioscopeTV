@@ -7,4 +7,31 @@
 
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+
+    <string name="openh_disabled_warn_title">OpenH264 Disabled</string>
+    <string name="openh_disabled_warn">OpenH264 is disabled, so you can not merge videos. Directing is disabled, but you can still collaborate with someone who can! </string>
+
+    <string name="menu_settings">Settings</string>
+
+
+    <!-- Preferences -->
+    <string name="stream_preferences">Streaming</string>
+
+    <string name="pref_stream_resolution">StreamResolution</string>
+    <string name="pref_stream_resolution_summary">Resolution sent across the stream</string>
+    <string name="pref_stream_resolution_title">Stream Resolution</string>
+
+    <string name="user_preferences">User Details</string>
+
+    <string name="pref_alloweventcreation_key">AllowEventCreation</string>
+    <string name="pref_cat_title">Settings</string>
+    <string name="title_activity_user_login">UserLoginActivity</string>
+    <string name="title_activity_video_library">VideoLibraryActivity</string>
+    <string name="title_activity_splash_screen">SplashScreen</string>
+    <string name="pref_ga_display_features_key">UseGADisplayFeatures</string>
+    <string name="title_activity_termsofservice">TermsofserviceActivity</string>
+    <string name="title_activity_termsofuse">TermsofuseActivity</string>
+    <string name="title_activity_licenses">LicensesActivity</string>
+    <string name="pref_version_number_key">VersionNumber</string>
+    <string name="title_activity_feedback">FeedbackActivity</string>
 </resources>
