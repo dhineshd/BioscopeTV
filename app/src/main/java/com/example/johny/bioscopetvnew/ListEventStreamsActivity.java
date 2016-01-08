@@ -116,9 +116,6 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                     } else if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
                         Log.i(TAG, "Received first video frame!");
                         progressBar.setVisibility(View.GONE);
-                    } else if (what == MediaPlayer.MEDIA_INFO_BUFFERING_END) {
-                        Log.i(TAG, "Buffering just ended!");
-                        progressBar.setVisibility(View.GONE);
                     }
                     //viewHolder.progressBar.setVisibility(mp.isPlaying()? View.INVISIBLE : View.VISIBLE);
                     return true;
@@ -327,10 +324,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                                 viewHolder.progressBar.setVisibility(View.GONE);
                                 mp.pause();
                                 eventLatestRefreshTimeMs.put(eventStream, System.currentTimeMillis());
-                            } else if (what == MediaPlayer.MEDIA_INFO_BUFFERING_END) {
-                                Log.i(TAG, "Buffering just ended!");
-                                viewHolder.progressBar.setVisibility(View.GONE);
-                            }
+                            } 
                             return true;
                         }
                     });
