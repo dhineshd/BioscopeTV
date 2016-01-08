@@ -1,12 +1,29 @@
 package com.example.johny.bioscopetvnew;
 
+import android.content.Intent;
+import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.widget.Toast;
+
+import com.bioscope.tv.backend.bioscopeBroadcastService.BioscopeBroadcastService;
+import com.example.johny.bioscopetvnew.com.example.johny.biscopetvnew.types.BroadcastEvent;
+import com.google.api.client.extensions.android.http.AndroidHttp;
+import com.google.api.client.extensions.android.json.AndroidJsonFactory;
+import com.google.api.client.googleapis.services.AbstractGoogleClientRequest;
+import com.google.api.client.googleapis.services.GoogleClientRequestInitializer;
+import com.google.gson.Gson;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URLEncoder;
 
 import io.kickflip.sdk.Kickflip;
 import io.kickflip.sdk.api.json.Stream;
 import io.kickflip.sdk.av.BroadcastListener;
+import io.kickflip.sdk.av.SessionConfig;
 import io.kickflip.sdk.exception.KickflipException;
 import io.kickflip.sdk.fragment.BroadcastFragment;
 
@@ -14,18 +31,25 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
 
     private static final String TAG = "StartBroadcastActivity";
     private static final String BROADCAST_FRAGMENT_TAG = "BroadcastFragment";
+
     private long latestUserInteractionTimestampMs;
 
     private BroadcastFragment mFragment;
-    private BroadcastListener mMainBroadcastListener;
+    private BioscopeBroadcastService serviceClient;
+    private BroadcastEvent event;
+    private Gson gson = new Gson();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_start_broadcast);
 
-        mMainBroadcastListener = Kickflip.getBroadcastListener();
-        Kickflip.setBroadcastListener(this);
+        initializeClient();
+
+        Intent intent = getIntent();
+        event = gson.fromJson(intent.getStringExtra(MainActivity.EVENT_KEY), BroadcastEvent.class);
+
+        setupBroadcast(event);
 
         if (savedInstanceState == null) {
             mFragment = BroadcastFragment.getInstance();
@@ -80,31 +104,85 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     private void stopBroadcast() {
         if (mFragment != null) {
             mFragment.stopBroadcasting();
-            Log.i(TAG, "Stopping broadcast..");
+            Log.i(TAG, "STOP_BROADCAST : Stopping broadcast..");
         } else {
-            Log.i(TAG, "Fragment is null");
+            Log.i(TAG, "STOP_BROADCAST : Fragment is null");
         }
+        finish();
     }
 
     @Override
     public void onBroadcastStart() {
-        mMainBroadcastListener.onBroadcastStart();
+        Log.i(TAG, "Broadcast started!");
     }
 
     @Override
     public void onBroadcastLive(Stream stream) {
-        mMainBroadcastListener.onBroadcastLive(stream);
+        Log.i(TAG, "BroadcastLive @ " + stream.getKickflipUrl());
+        Log.i(TAG, "Stream URL :" + stream.getStreamUrl());
+        new CreateEventStreamTask().execute(event.getEventId(), stream.getStreamUrl());
     }
 
     @Override
     public void onBroadcastStop() {
+        Log.i(TAG, "Broadcast stopped!");
         finish();
-        mMainBroadcastListener.onBroadcastStop();
     }
 
     @Override
     public void onBroadcastError(KickflipException error) {
-        mMainBroadcastListener.onBroadcastError(error);
+        Log.i(TAG, "Broadcast error = " + error.getMessage());
+    }
+
+    private void setupBroadcast(final BroadcastEvent event) {
+        String outputLocation = new File(getApplicationContext().getFilesDir(), "index.m3u8").getAbsolutePath();
+        Kickflip.setSessionConfig(new SessionConfig.Builder(outputLocation)
+                .withVideoBitrate(300 * 1000)
+                        //.withAudioBitrate()
+                .withPrivateVisibility(false)
+                .withLocation(true)
+                .withTitle(event.getEventName())
+                .withVideoResolution(640, 360)
+                .withAdaptiveStreaming(true)
+                .build());
+        Kickflip.setBroadcastListener(this);
+    }
+
+    private void initializeClient() {
+        if(serviceClient == null) {  // Only do this once
+            BioscopeBroadcastService.Builder builder = new BioscopeBroadcastService.Builder(AndroidHttp.newCompatibleTransport(),
+                    new AndroidJsonFactory(), null)
+                    .setRootUrl(MainActivity.ROOT_URL)
+                    .setGoogleClientRequestInitializer(new GoogleClientRequestInitializer() {
+                        @Override
+                        public void initialize(AbstractGoogleClientRequest<?> abstractGoogleClientRequest) throws IOException {
+                            abstractGoogleClientRequest.setDisableGZipContent(true);
+                        }
+                    });
+            // end options for devappserver
+
+            serviceClient = builder.build();
+        }
+    }
+
+    class CreateEventStreamTask extends AsyncTask<String, Void, String> {
+
+        @Override
+        protected String doInBackground(String... params) {
+            try {
+                String eventId = params[0];
+                String url = URLEncoder.encode(params[1], "UTF-8");
+                return serviceClient.createEventStream(eventId, url, Build.MODEL).execute().getData();
+            } catch (IOException e) {
+                Log.e(TAG, "Failed to create eventStream", e);
+                return e.getMessage();
+            }
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            Toast.makeText(getApplicationContext(), "Event stream created!", Toast.LENGTH_LONG).show();
+        }
     }
 
 }

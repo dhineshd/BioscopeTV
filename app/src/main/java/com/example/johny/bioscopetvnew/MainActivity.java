@@ -26,6 +26,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bioscope.tv.backend.bioscopeBroadcastService.BioscopeBroadcastService;
+import com.example.johny.bioscopetvnew.com.example.johny.biscopetvnew.types.BroadcastEvent;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.extensions.android.json.AndroidJsonFactory;
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest;
@@ -33,9 +34,7 @@ import com.google.api.client.googleapis.services.GoogleClientRequestInitializer;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -43,10 +42,6 @@ import java.util.List;
 import java.util.Set;
 
 import io.kickflip.sdk.Kickflip;
-import io.kickflip.sdk.api.json.Stream;
-import io.kickflip.sdk.av.BroadcastListener;
-import io.kickflip.sdk.av.SessionConfig;
-import io.kickflip.sdk.exception.KickflipException;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -54,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String CLIENT_SECRET = "@E=FJIv8Tkmp8AG@Vh;e1QE!Msku-uVh?=hmguvStuVKW59sRx_HIJrDla=eDx8GsWBav=l8_sZ31hPz6qjKFRTdpKD@3SoX?;cqUn8trkxnnD;A6gIuuvD:0C466Gwx";
     private static final String TAG = "MainActivity";
     public static final String ROOT_URL = "https://bioscope-b2074.appspot.com/_ah/api";
+    public static final String EVENT_KEY = "EVENT";
     private static final long REFRESH_INTERVAL_MS = 60000;
     private static final long REFRESH_CHECK_INTERVAL_MS = 20000;
     private long latestUserInteractionTimestampMs;
@@ -239,7 +235,7 @@ public class MainActivity extends AppCompatActivity {
                             .setPositiveButton("View", new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialog, int which) {
                                     Intent intent = new Intent(MainActivity.this, ListEventStreamsActivity.class);
-                                    intent.putExtra(ListEventStreamsActivity.EVENT_ID_KEY, selectedEvent.eventId);
+                                    intent.putExtra(ListEventStreamsActivity.EVENT_ID_KEY, selectedEvent.getEventId());
                                     startActivity(intent);
                                 }
                             });
@@ -248,12 +244,16 @@ public class MainActivity extends AppCompatActivity {
                     if(allEventCreation()) {
                         builder .setNegativeButton("Broadcast", new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int which) {
-                                startBroadcast(selectedEvent);
+
+                                Intent intent = new Intent(MainActivity.this, StartBroadcastActivity.class);
+                                intent.putExtra(EVENT_KEY, gson.toJson(selectedEvent));
+                                startActivity(intent);
                             }
                         });
                     }
 
                     builder.show();
+
                 }
             });
 
@@ -294,8 +294,8 @@ public class MainActivity extends AppCompatActivity {
                     viewHolder = (ViewHolder) convertView.getTag();
                 }
 
-                viewHolder.eventText.setText(event.eventName + "\ncreated by " + event.creator +
-                        "\nat " + new Date(event.timestampMs));
+                viewHolder.eventText.setText(event.getEventName() + "\ncreated by " + event.getCreator() +
+                        "\nat " + new Date(event.getTimestampMs()));
 
             } catch (Exception e) {
                 Log.w(TAG, "Failed to load view for position = " + position);
@@ -338,73 +338,6 @@ public class MainActivity extends AppCompatActivity {
             refreshListOfEvents();
             Toast.makeText(getApplicationContext(), notificationText, Toast.LENGTH_LONG).show();
         }
-    }
-
-
-    private void startBroadcast(final BroadcastEvent event) {
-        String outputLocation = new File(getApplicationContext().getFilesDir(), "index.m3u8").getAbsolutePath();
-        Kickflip.setSessionConfig(new SessionConfig.Builder(outputLocation)
-                .withVideoBitrate(300 * 1000)
-                //.withAudioBitrate()
-                .withPrivateVisibility(false)
-                .withLocation(true)
-                .withTitle(event.eventName)
-                .withVideoResolution(640, 360)
-                .withAdaptiveStreaming(true)
-                .build());
-
-        BroadcastListener broadcastListener = new BroadcastListener() {
-            @Override
-            public void onBroadcastStart() {
-
-            }
-
-            @Override
-            public void onBroadcastLive(Stream stream) {
-                Log.i(TAG, "BroadcastLive @ " + stream.getKickflipUrl());
-                Log.i(TAG, "Stream URL :" + stream.getStreamUrl());
-                new CreateEventStreamTask().execute(event.eventId, stream.getStreamUrl());
-            }
-
-            @Override
-            public void onBroadcastStop() {
-
-            }
-
-            @Override
-            public void onBroadcastError(KickflipException e) {
-
-            }
-        };
-        Kickflip.setBroadcastListener(broadcastListener);
-        startActivity(new Intent(MainActivity.this, StartBroadcastActivity.class));
-    }
-
-    class CreateEventStreamTask extends AsyncTask<String, Void, String> {
-
-        @Override
-        protected String doInBackground(String... params) {
-            try {
-                String eventId = params[0];
-                String url = URLEncoder.encode(params[1], "UTF-8");
-                return serviceClient.createEventStream(eventId, url, Build.MODEL).execute().getData();
-            } catch (IOException e) {
-                Log.e(TAG, "Failed to create eventStream", e);
-                return e.getMessage();
-            }
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            Toast.makeText(getApplicationContext(), "Event stream created!", Toast.LENGTH_LONG).show();
-        }
-    }
-
-    static class BroadcastEvent {
-        String eventId;
-        String eventName;
-        String creator;
-        long timestampMs;
     }
 
     private boolean allEventCreation() {

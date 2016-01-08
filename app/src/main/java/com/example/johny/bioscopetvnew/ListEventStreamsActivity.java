@@ -15,6 +15,7 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.GridView;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.VideoView;
@@ -134,6 +135,10 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         Log.i(TAG, "onPause invoked!");
         super.onPause();
         refreshHandler.removeCallbacks(refreshRunnable);
+
+        if (isFinishing()) {
+            cleanup();
+        }
     }
 
     @Override
@@ -147,14 +152,14 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         super.onUserLeaveHint();
         if (System.currentTimeMillis() - latestUserInteractionTimestampMs < 10) {
             Log.i(TAG, "Detected that user is leaving..");
-            cleanup();
+            finish();
         }
     }
 
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        cleanup();
+        finish();
     }
 
     private void cleanup() {
@@ -221,14 +226,25 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                                         Log.i(TAG, "Found live stream : URL = " + stream.getEncodedUrl());
                                     }
                                 });
+                            } else {
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        eventStreamListAdapter.remove(stream);
+                                        Log.i(TAG, "Found live stream : URL = " + stream.getEncodedUrl());
+                                    }
+                                });
                             }
                             mp.reset();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
+                        } catch (Exception e) {
+                            Log.e(TAG, "Failed to check live-status of stream", e);
                         }
                     }
                 }
                 mp.release();
+
+
+
 
                 return eventStreams;
             } catch (Exception e) {
@@ -264,6 +280,12 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         }
 
         @Override
+        public void remove(BroadcastEventStream object) {
+            liveStreams.remove(object);
+            super.remove(object);
+        }
+
+        @Override
         public View getView(int position, View convertView, ViewGroup parent) {
             try {
                 // Get the data item for this position
@@ -278,15 +300,14 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 } else {
                     viewHolder = (ViewHolder) convertView.getTag();
                 }
+                Uri url = Uri.parse(URLDecoder.decode(eventStream.getEncodedUrl(), "UTF-8"));
                 if (eventStream.equals(mainEventStream)) {
                     viewHolder.streamVideo.setBackground(getDrawable(R.drawable.rectangle));
                 } else {
                     viewHolder.streamVideo.setBackground(null);
                 }
-                Long latestRefreshTimeMs = eventLatestRefreshTimeMs.get(eventStream);
-                if (latestRefreshTimeMs == null || (System.currentTimeMillis() - latestRefreshTimeMs > REFRESH_INTERVAL_MS)) {
-                    eventLatestRefreshTimeMs.put(eventStream, System.currentTimeMillis());
-                    viewHolder.streamVideo.setVideoURI(Uri.parse(URLDecoder.decode(eventStream.getEncodedUrl(), "UTF-8")));
+                if (shouldRefreshThumbnail(eventStream, position)) {
+                    viewHolder.streamVideo.setVideoURI(url);
                     viewHolder.streamVideo.setOnInfoListener(new MediaPlayer.OnInfoListener() {
                         @Override
                         public boolean onInfo(MediaPlayer mp, int what, int extra) {
@@ -297,6 +318,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                                 Log.i(TAG, "Received first video frame!");
                                 viewHolder.progressBar.setVisibility(View.GONE);
                                 mp.pause();
+                                eventLatestRefreshTimeMs.put(eventStream, System.currentTimeMillis());
                             }
                             return true;
                         }
@@ -309,9 +331,12 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                         }
                     });
                     viewHolder.streamVideo.start();
+                    Log.i(TAG, "Performing thumbnail update for position = " + position);
+                } else {
+                    Log.i(TAG, "Skipping thumbnail update for position = " + position);
                 }
             } catch (Exception e) {
-                Log.w(TAG, "Failed to load view for position = " + position);
+                Log.w(TAG, "Failed to load view for position = " + position, e);
             }
 
             return convertView;
@@ -320,9 +345,17 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         private ViewHolder createViewHolder(final View view) {
             ViewHolder viewHolder = new ViewHolder();
             //viewHolder.streamInfo = (TextView) view.findViewById(R.id.list_item_event_stream_textview);
+            //viewHolder.streamThumbnail = (ImageView) view.findViewById(R.id.list_item_event_stream_imageview);
             viewHolder.streamVideo = (VideoView) view.findViewById(R.id.list_item_event_stream_videoview);
             viewHolder.progressBar = (ProgressBar) view.findViewById(R.id.list_item_event_stream_progressbar);
             return viewHolder;
+        }
+
+        private boolean shouldRefreshThumbnail(final BroadcastEventStream stream, final int position) {
+            Long latestRefreshTimeMs = eventLatestRefreshTimeMs.get(stream);
+            return (latestRefreshTimeMs == null ||
+                    (System.currentTimeMillis() - latestRefreshTimeMs > REFRESH_INTERVAL_MS));
+
         }
     }
 
@@ -330,6 +363,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private static class ViewHolder {
         TextView streamInfo;
         VideoView streamVideo;
+        ImageView streamThumbnail;
         ProgressBar progressBar;
     }
 
