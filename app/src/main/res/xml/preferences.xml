@@ -6,12 +6,8 @@
 
     <PreferenceCategory
         android:layout="@layout/preference_category"
+        android:key="@string/pref_cat_settings_key"
         android:title="@string/pref_cat_title">
-        <SwitchPreference
-            android:key="@string/pref_alloweventcreation_key"
-            android:title="Enable Event Creation"
-            android:defaultValue="false"
-            android:checked="false" />
         <SwitchPreference
             android:key="@string/pref_ga_display_features_key"
             android:title="Google Analytics Display Features"
@@ -22,6 +18,11 @@
             android:key="@string/pref_version_number_key"
             android:title="Version Number"
             />
+        <SwitchPreference
+            android:key="@string/pref_alloweventcreation_key"
+            android:title="Enable Event Creation"
+            android:defaultValue="false"
+            android:checked="false" />
     </PreferenceCategory>
 
 </PreferenceScreen>

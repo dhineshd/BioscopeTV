@@ -4,7 +4,9 @@ import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.os.Handler;
 import android.preference.Preference;
+import android.preference.PreferenceCategory;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
 import android.preference.SwitchPreference;
@@ -24,6 +26,8 @@ import lombok.extern.slf4j.Slf4j;
 public class PreferencesActivity extends AppCompatActivity {
 
     private SettingsFragment settingsFragment;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +61,13 @@ public class PreferencesActivity extends AppCompatActivity {
      */
     public static class SettingsFragment extends PreferenceFragment
             implements SharedPreferences.OnSharedPreferenceChangeListener {
+
+        private final int UNLOCK_COUNT = 10;
+
+        private int currentCount = 0;
+
+        private PreferenceCategory settingsPreferenceCategory;
+
         @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
@@ -69,8 +80,39 @@ public class PreferencesActivity extends AppCompatActivity {
             // Load the preferences from an XML resource
             addPreferencesFromResource(R.xml.preferences);
 
+            settingsPreferenceCategory = (PreferenceCategory)findPreference
+                    (getString(R.string.pref_cat_settings_key));
+
+            final Preference allowEventCreationPref = findPreference(getString(R.string.pref_alloweventcreation_key));
+
+            settingsPreferenceCategory.removePreference(allowEventCreationPref);
+
             Preference versionNumberPref = findPreference(getString(R.string.pref_version_number_key));
             versionNumberPref.setSummary(getVersionName());
+
+            versionNumberPref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+                @Override
+                public boolean onPreferenceClick(Preference preference) {
+                    log.info("version number pressed");
+
+                    if(currentCount == 0) {
+                        new Handler().postDelayed(new Runnable() {
+
+                            @Override
+                            public void run() {
+                                currentCount=0;
+                            }
+                        }, 10000);
+                    }
+
+                    if(++currentCount >= UNLOCK_COUNT) {
+                        settingsPreferenceCategory.addPreference(allowEventCreationPref);
+                    }
+
+                    return false;
+                }
+            });
+
         }
 
         @Override

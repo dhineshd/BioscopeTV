@@ -227,32 +227,28 @@ public class MainActivity extends AppCompatActivity {
                 public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                     final BroadcastEvent selectedEvent = events.get(position);
 
-
-
-                    AlertDialog.Builder builder =
-                    new AlertDialog.Builder(MainActivity.this)
-                            .setTitle("Select action")
-                            .setPositiveButton("View", new DialogInterface.OnClickListener() {
+                    if (!allEventCreation()) {
+                        Intent intent = new Intent(MainActivity.this, ListEventStreamsActivity.class);
+                        intent.putExtra(EVENT_KEY, gson.toJson(selectedEvent));
+                        startActivity(intent);
+                    } else {
+                                new AlertDialog.Builder(MainActivity.this)
+                                        .setTitle("Select action")
+                                        .setPositiveButton("View", new DialogInterface.OnClickListener() {
+                                            public void onClick(DialogInterface dialog, int which) {
+                                                Intent intent = new Intent(MainActivity.this, ListEventStreamsActivity.class);
+                                                intent.putExtra(EVENT_KEY, gson.toJson(selectedEvent));
+                                                startActivity(intent);
+                                            }
+                                        }).setNegativeButton("Broadcast", new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialog, int which) {
-                                    Intent intent = new Intent(MainActivity.this, ListEventStreamsActivity.class);
+
+                                    Intent intent = new Intent(MainActivity.this, StartBroadcastActivity.class);
                                     intent.putExtra(EVENT_KEY, gson.toJson(selectedEvent));
                                     startActivity(intent);
                                 }
-                            });
-
-                    //Show broadcast only when allowEventCreation settings is on
-                    if(allEventCreation()) {
-                        builder .setNegativeButton("Broadcast", new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int which) {
-
-                                Intent intent = new Intent(MainActivity.this, StartBroadcastActivity.class);
-                                intent.putExtra(EVENT_KEY, gson.toJson(selectedEvent));
-                                startActivity(intent);
-                            }
-                        });
+                            }).show();
                     }
-
-                    builder.show();
 
                 }
             });

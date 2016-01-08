@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.widget.Toast;
@@ -67,11 +68,27 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
         Log.i(TAG, "onRestoreInstanceState!");
     }
 
+    boolean doubleBackToExitPressedOnce = false;
+
     @Override
     public void onBackPressed() {
-        super.onBackPressed();
-        Log.i(TAG, "onBackPressed invoked!");
-        stopBroadcast();
+        if (doubleBackToExitPressedOnce) {
+            super.onBackPressed();
+            Log.i(TAG, "onBackPressed invoked!");
+            stopBroadcast();
+            return;
+        }
+
+        this.doubleBackToExitPressedOnce = true;
+        Toast.makeText(this, "Please click BACK again to exit", Toast.LENGTH_SHORT).show();
+
+        new Handler().postDelayed(new Runnable() {
+
+            @Override
+            public void run() {
+                doubleBackToExitPressedOnce = false;
+            }
+        }, 2000);
     }
 
     @Override

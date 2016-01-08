@@ -25,6 +25,8 @@
 
     <string name="pref_alloweventcreation_key">AllowEventCreation</string>
     <string name="pref_cat_title">Settings</string>
+    <string name="pref_cat_settings_key">SettingsPrefCat</string>
+
     <string name="title_activity_user_login">UserLoginActivity</string>
     <string name="title_activity_video_library">VideoLibraryActivity</string>
     <string name="title_activity_splash_screen">SplashScreen</string>
