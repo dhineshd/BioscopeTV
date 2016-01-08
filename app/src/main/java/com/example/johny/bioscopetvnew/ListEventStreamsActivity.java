@@ -41,7 +41,6 @@ import java.util.Map;
 import java.util.Set;
 
 public class ListEventStreamsActivity extends AppCompatActivity {
-    public static final String EVENT_ID_KEY = "EVENT_ID";
     private static final String TAG = "ListEventStreams";
     private static final long REFRESH_INTERVAL_MS = 60000;
     private static final long REFRESH_CHECK_INTERVAL_MS = 30000;
@@ -210,50 +209,42 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         protected List<BroadcastEventStream> doInBackground(Void... params) {
 
             try {
-                String response = serviceClient.listEventStreams(event.getEventId()).execute().getData();
+                // Get live streams only
+                String response = serviceClient.listEventStreams(event.getEventId(), true).execute().getData();
                 Log.i(TAG, "Received ListEventStreams response = " + response);
-                List<BroadcastEventStream> eventStreams =  gson.fromJson(response,
+                final List<BroadcastEventStream> eventStreams =  gson.fromJson(response,
                         new TypeToken<List<BroadcastEventStream>>() {
                         }.getType());
 
-                MediaPlayer mp = new MediaPlayer();
-                for (final BroadcastEventStream stream : eventStreams) {
-                    if (stream != null) {
-                        try {
-                            mp.setDataSource(URLDecoder.decode(stream.getEncodedUrl(), "UTF-8"));
-                            mp.prepare();
-                            // Check if live stream
-                            if (mp.getDuration() <= 0) {
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        eventStreamListAdapter.add(stream);
-                                        Log.i(TAG, "Found live stream : URL = " + stream.getEncodedUrl());
-                                    }
-                                });
-                            } else {
-                                runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        eventStreamListAdapter.remove(stream);
-                                        Log.i(TAG, "Found live stream : URL = " + stream.getEncodedUrl());
-                                    }
-                                });
+                // Remove expired streams from view
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        for (BroadcastEventStream liveStream : liveStreams) {
+                            if (!eventStreams.contains(liveStream)) {
+                                eventStreamListAdapter.remove(liveStream);
+                                Log.i(TAG, "Removed non-live stream : streamId = " + liveStream.getStreamId());
                             }
-                            mp.reset();
-                        } catch (Exception e) {
-                            Log.e(TAG, "Failed to check live-status of stream", e);
                         }
                     }
+                });
+
+                // Add received streams to view
+                for (final BroadcastEventStream stream : eventStreams) {
+                    if (stream != null) {
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                eventStreamListAdapter.add(stream);
+                                Log.i(TAG, "Found non-live stream : streamId = " + stream.getStreamId());
+                            }
+                        });
+                    }
                 }
-                mp.release();
-
-
-
 
                 return eventStreams;
             } catch (Exception e) {
-                Log.e(TAG, "Failed to list events", e);
+                Log.e(TAG, "Failed to list event streams", e);
                 return Collections.EMPTY_LIST;
             }
         }
@@ -336,6 +327,10 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                         }
                     });
                     viewHolder.streamVideo.start();
+//                    MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+//                    mmr.setDataSource(url.toString(), Collections.EMPTY_MAP);
+//                    viewHolder.streamThumbnail.setImageBitmap(mmr.getFrameAtTime(0));
+
                     Log.i(TAG, "Performing thumbnail update for position = " + position);
                 } else {
                     Log.i(TAG, "Skipping thumbnail update for position = " + position);
@@ -350,7 +345,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         private ViewHolder createViewHolder(final View view) {
             ViewHolder viewHolder = new ViewHolder();
             //viewHolder.streamInfo = (TextView) view.findViewById(R.id.list_item_event_stream_textview);
-            //viewHolder.streamThumbnail = (ImageView) view.findViewById(R.id.list_item_event_stream_imageview);
+            viewHolder.streamThumbnail = (ImageView) view.findViewById(R.id.list_item_event_stream_imageview);
             viewHolder.streamVideo = (VideoView) view.findViewById(R.id.list_item_event_stream_videoview);
             viewHolder.progressBar = (ProgressBar) view.findViewById(R.id.list_item_event_stream_progressbar);
             return viewHolder;

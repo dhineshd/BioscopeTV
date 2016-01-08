@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.bioscope.tv.backend.bioscopeBroadcastService.BioscopeBroadcastService;
 import com.example.johny.bioscopetvnew.com.example.johny.biscopetvnew.types.BroadcastEvent;
@@ -39,6 +38,7 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     private BioscopeBroadcastService serviceClient;
     private BroadcastEvent event;
     private Gson gson = new Gson();
+    private String streamId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -121,11 +121,27 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     private void stopBroadcast() {
         if (mFragment != null) {
             mFragment.stopBroadcasting();
+            new UpdateEventStreamStatusToNotLiveTask().execute(streamId);
             Log.i(TAG, "STOP_BROADCAST : Stopping broadcast..");
         } else {
             Log.i(TAG, "STOP_BROADCAST : Fragment is null");
         }
         finish();
+    }
+
+    class UpdateEventStreamStatusToNotLiveTask extends AsyncTask<String, Void, Void> {
+        @Override
+        protected Void doInBackground(String... params) {
+            String streamId = params[0];
+            try {
+                serviceClient.updateEventStream(streamId, false).execute();
+                Log.i(TAG, "Successfully updated event stream status to not live");
+                // TODO : Handle invalid streamId case which should throw server exception
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to update event stream for streamId = " + streamId);
+            }
+            return null;
+        }
     }
 
     @Override
@@ -198,7 +214,8 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
 
         @Override
         protected void onPostExecute(String result) {
-            Toast.makeText(getApplicationContext(), "Event stream created!", Toast.LENGTH_LONG).show();
+            streamId = result;
+            Log.i(TAG, "Created event stream : streamId = " + streamId);
         }
     }
 

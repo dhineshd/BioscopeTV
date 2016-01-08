@@ -12,7 +12,10 @@ import com.google.api.server.spi.config.ApiNamespace;
 import com.google.appengine.api.datastore.DatastoreService;
 import com.google.appengine.api.datastore.DatastoreServiceFactory;
 import com.google.appengine.api.datastore.Entity;
+import com.google.appengine.api.datastore.EntityNotFoundException;
 import com.google.appengine.api.datastore.FetchOptions;
+import com.google.appengine.api.datastore.Key;
+import com.google.appengine.api.datastore.KeyFactory;
 import com.google.appengine.api.datastore.Query;
 import com.google.appengine.api.datastore.Query.Filter;
 import com.google.appengine.api.datastore.Query.FilterOperator;
@@ -95,11 +98,33 @@ public class MyEndpoint {
             eventStream.setProperty("timestampMs", System.currentTimeMillis());
             eventStream.setProperty("encodedUrl", encodedUrl);
             eventStream.setProperty("creator", creator);
+            eventStream.setProperty("isLive", true);
 
             datastore.put(eventStream);
         }
 
         response.setData(streamId);
+        return response;
+    }
+
+    /** A method to update stream info for a given event */
+    @ApiMethod(name = "updateEventStream")
+    public MyBean updateEventStreamStatus(
+            @Named("streamId") String streamId,
+            @Named("isLive") boolean isLive) {
+
+        MyBean response = new MyBean();
+
+        Key streamKey = KeyFactory.createKey("EventStream", streamId);
+        Entity stream = null;
+        try {
+            stream = datastore.get(streamKey);
+            stream.setProperty("isLive", isLive);
+            datastore.put(stream);
+        } catch (EntityNotFoundException e) {
+            // TODO : entity not found, propagate failure to client
+        }
+
         return response;
     }
 
@@ -121,11 +146,19 @@ public class MyEndpoint {
 
     /** A method to list streams for a given event */
     @ApiMethod(name = "listEventStreams")
-    public MyBean listEventStreams(@Named("eventId") String eventId) {
+    public MyBean listEventStreams(
+            @Named("eventId") String eventId,
+            @Named("isLive") Boolean isLive) {
         MyBean response = new MyBean();
 
-        Filter propertyFilter = new FilterPredicate("eventId", FilterOperator.EQUAL, eventId);
-        Query query = new Query("EventStream").setFilter(propertyFilter)
+        Filter eventFilter = new FilterPredicate("eventId", FilterOperator.EQUAL, eventId);
+        Filter filter = eventFilter;
+        if (isLive != null) {
+            Filter statusFilter = new FilterPredicate("isLive", FilterOperator.EQUAL, isLive);
+            filter = Query.CompositeFilterOperator.and(eventFilter, statusFilter);
+        }
+
+        Query query = new Query("EventStream").setFilter(filter)
                 .addSort("timestampMs", Query.SortDirection.DESCENDING);
 
         List<Map<String, Object>> eventStreams = new LinkedList<>();

@@ -14,7 +14,15 @@
             android:layout_centerInParent="true"
             android:layout_width="96dp"
             android:layout_height="54dp"
+            android:visibility="visible"
             android:id="@+id/list_item_event_stream_videoview"/>
+
+        <ImageView
+            android:layout_centerInParent="true"
+            android:layout_width="96dp"
+            android:layout_height="54dp"
+            android:visibility="invisible"
+            android:id="@+id/list_item_event_stream_imageview"/>
 
         <ProgressBar
             android:layout_width="wrap_content"
