@@ -165,7 +165,11 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     public void onBroadcastLive(Stream stream) {
         Log.i(TAG, "BroadcastLive @ " + stream.getKickflipUrl());
         Log.i(TAG, "Stream URL :" + stream.getStreamUrl());
-        new CreateEventStreamTask().execute(event.getEventId(), stream.getStreamUrl());
+        if (isFinishing()) {
+            Log.i(TAG, "Not creating stream since we are finishing..");
+        } else {
+            new CreateEventStreamTask().execute(event.getEventId(), stream.getStreamUrl());
+        }
     }
 
     @Override
