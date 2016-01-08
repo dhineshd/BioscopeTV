@@ -157,7 +157,7 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
                 .withVideoBitrate(300 * 1000)
                         //.withAudioBitrate()
                 .withPrivateVisibility(false)
-                .withLocation(true)
+                .withLocation(false)
                 .withTitle(event.getEventName())
                 .withVideoResolution(640, 360)
                 .withAdaptiveStreaming(true)
