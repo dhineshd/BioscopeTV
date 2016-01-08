@@ -324,7 +324,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                                 viewHolder.progressBar.setVisibility(View.GONE);
                                 mp.pause();
                                 eventLatestRefreshTimeMs.put(eventStream, System.currentTimeMillis());
-                            } 
+                            }
                             return true;
                         }
                     });
