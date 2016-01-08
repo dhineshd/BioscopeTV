@@ -21,6 +21,7 @@ import android.widget.TextView;
 import android.widget.VideoView;
 
 import com.bioscope.tv.backend.bioscopeBroadcastService.BioscopeBroadcastService;
+import com.example.johny.bioscopetvnew.com.example.johny.biscopetvnew.types.BroadcastEvent;
 import com.example.johny.bioscopetvnew.com.example.johny.biscopetvnew.types.BroadcastEventStream;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.extensions.android.json.AndroidJsonFactory;
@@ -49,16 +50,16 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private Handler refreshHandler;
     private Runnable refreshRunnable;
 
-    private String eventId;
-
     private Gson gson = new Gson();
     private VideoView videoView;
+    private TextView textViewEventName;
     private ProgressBar progressBar;
     private EventStreamListAdapter eventStreamListAdapter;
     private Set<BroadcastEventStream> liveStreams = new HashSet<>();
     private AsyncTask listStreamsTask;
     private Map<BroadcastEventStream, Long> eventLatestRefreshTimeMs = new HashMap<>();
     private BroadcastEventStream mainEventStream;
+    private BroadcastEvent event;
 
     private BioscopeBroadcastService serviceClient;
     @Override
@@ -67,11 +68,15 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_list_event_streams);
 
         Intent intent = getIntent();
-        eventId = intent.getStringExtra(EVENT_ID_KEY);
+        event = gson.fromJson(intent.getStringExtra(MainActivity.EVENT_KEY), BroadcastEvent.class);
 
         initializeClient();
 
         videoView = (VideoView) findViewById(R.id.videoview_view_stream);
+
+        textViewEventName = (TextView) findViewById(R.id.textview_view_stream);
+
+        textViewEventName.setText(event.getEventName());
 
         progressBar = (ProgressBar) findViewById(R.id.progressbar_view_stream);
 
@@ -205,7 +210,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         protected List<BroadcastEventStream> doInBackground(Void... params) {
 
             try {
-                String response = serviceClient.listEventStreams(eventId).execute().getData();
+                String response = serviceClient.listEventStreams(event.getEventId()).execute().getData();
                 Log.i(TAG, "Received ListEventStreams response = " + response);
                 List<BroadcastEventStream> eventStreams =  gson.fromJson(response,
                         new TypeToken<List<BroadcastEventStream>>() {

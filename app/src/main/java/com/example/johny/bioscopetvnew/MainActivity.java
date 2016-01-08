@@ -213,7 +213,7 @@ public class MainActivity extends AppCompatActivity {
                             .setPositiveButton("View", new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialog, int which) {
                                     Intent intent = new Intent(MainActivity.this, ListEventStreamsActivity.class);
-                                    intent.putExtra(ListEventStreamsActivity.EVENT_ID_KEY, selectedEvent.getEventId());
+                                    intent.putExtra(EVENT_KEY, gson.toJson(selectedEvent));
                                     startActivity(intent);
                                 }
                             })
