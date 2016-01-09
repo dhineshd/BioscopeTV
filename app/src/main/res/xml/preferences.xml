@@ -13,6 +13,10 @@
             android:title="Google Analytics Display Features"
             android:defaultValue="true"
             android:checked="true" />
+        <Preference android:title="Terms of use" >
+        <intent android:targetPackage="tv.bioscope.android"
+            android:targetClass="com.example.johny.bioscopetvnew.TermsofuseActivity" />
+        </Preference>
         <Preference
             android:defaultValue=""
             android:key="@string/pref_version_number_key"

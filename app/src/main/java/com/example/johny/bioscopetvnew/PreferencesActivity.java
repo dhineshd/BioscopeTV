@@ -27,12 +27,23 @@ public class PreferencesActivity extends AppCompatActivity {
 
     private SettingsFragment settingsFragment;
 
+    private ImageButton minimizeButton;
+
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_preferences);
+
+        minimizeButton = (ImageButton) findViewById(R.id.minimize_settings);
+
+        minimizeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
 
         settingsFragment = new SettingsFragment();
 
@@ -137,6 +148,8 @@ public class PreferencesActivity extends AppCompatActivity {
                                     }
                                 }
                             }).show();
+
+                    BioscopeTVApplication.getMetrics().setShouldEnableAdvertisingIdCollection(connectionPref.isChecked());
                 }
 
             } else if(getString(R.string.pref_alloweventcreation_key).equals(key)) {

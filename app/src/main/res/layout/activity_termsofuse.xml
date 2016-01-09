@@ -1,0 +1,39 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+     android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#ffffff"
+    android:orientation="vertical"
+    >
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@color/bioscope_teal">
+
+        <ImageButton
+            android:id="@+id/minimize_terms_of_use"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:background="@null"
+            android:padding="12dp"
+            android:rotation="270"
+            android:src="@mipmap/up_arrow_4x" />
+    </RelativeLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:linksClickable="true"
+        android:id="@+id/terms_of_use_text_view"
+        android:layout_margin="@dimen/activity_horizontal_margin"
+        android:text="Terms of use is also available at http://www.wearebioscope.com/terms-of-use"
+        />
+    <WebView
+        android:id="@+id/terms_of_use_web_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_margin="@dimen/activity_horizontal_margin"
+        android:scrollbars="vertical" />
+</LinearLayout>
+
