@@ -41,6 +41,7 @@ import javax.inject.Named;
 public class MyEndpoint {
     private static final int MAX_EVENTS_TO_LIST = 5;
     private static final int MAX_EVENT_STREAMS_TO_LIST = 5;
+    private static final long MAX_ACCEPTABLE_STALENESS_FOR_LIVE_STREAM_MS = 60000;
 
     private DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
 
@@ -56,7 +57,7 @@ public class MyEndpoint {
 
         Entity event = new Entity("Event", eventId);
         event.setProperty("eventId", eventId);
-        event.setProperty("timestampMs", System.currentTimeMillis());
+        event.setProperty("creationTimeMs", System.currentTimeMillis());
         event.setProperty("eventName", eventName);
         event.setProperty("creator", creator);
 
@@ -72,6 +73,8 @@ public class MyEndpoint {
             @Named("eventId") String eventId,
             @Named("encodedUrl") String encodedUrl,
             @Named("creator") String creator) {
+
+        // TODO : Check if event exists and throw exception otherwise
 
         MyBean response = new MyBean();
 
@@ -95,7 +98,9 @@ public class MyEndpoint {
             Entity eventStream = new Entity("EventStream", streamId);
             eventStream.setProperty("streamId", streamId);
             eventStream.setProperty("eventId", eventId);
-            eventStream.setProperty("timestampMs", System.currentTimeMillis());
+            long currentTime = System.currentTimeMillis();
+            eventStream.setProperty("creationTimeMs", currentTime);
+            eventStream.setProperty("lastUpdatedTimeMs", currentTime);
             eventStream.setProperty("encodedUrl", encodedUrl);
             eventStream.setProperty("creator", creator);
             eventStream.setProperty("isLive", true);
@@ -113,6 +118,8 @@ public class MyEndpoint {
             @Named("streamId") String streamId,
             @Named("isLive") boolean isLive) {
 
+        // TODO : Check if stream exists and throw exception otherwise
+
         MyBean response = new MyBean();
 
         Key streamKey = KeyFactory.createKey("EventStream", streamId);
@@ -120,9 +127,10 @@ public class MyEndpoint {
         try {
             stream = datastore.get(streamKey);
             stream.setProperty("isLive", isLive);
+            stream.setProperty("lastUpdatedTimeMs", System.currentTimeMillis());
             datastore.put(stream);
         } catch (EntityNotFoundException e) {
-            // TODO : entity not found, propagate failure to client
+            // ignore (to be handled as part of input validation)
         }
 
         return response;
@@ -133,7 +141,7 @@ public class MyEndpoint {
     public MyBean listEvents() {
         MyBean response = new MyBean();
 
-        Query query = new Query("Event").addSort("timestampMs", Query.SortDirection.DESCENDING);
+        Query query = new Query("Event").addSort("creationTimeMs", Query.SortDirection.DESCENDING);
 
         List<Map<String, Object>> events = new LinkedList<>();
         for (Entity result : datastore.prepare(query).asList(
@@ -156,10 +164,17 @@ public class MyEndpoint {
         if (isLive != null) {
             Filter statusFilter = new FilterPredicate("isLive", FilterOperator.EQUAL, isLive);
             filter = Query.CompositeFilterOperator.and(eventFilter, statusFilter);
+            if (Boolean.TRUE.equals(isLive)) {
+                // Only consider streams updated recently even if they are all marked live
+                Filter freshnessFilter = new FilterPredicate("lastUpdatedTimeMs",
+                        FilterOperator.GREATER_THAN,
+                        System.currentTimeMillis() - MAX_ACCEPTABLE_STALENESS_FOR_LIVE_STREAM_MS);
+                filter = Query.CompositeFilterOperator.and(eventFilter, statusFilter, freshnessFilter);
+            }
         }
 
         Query query = new Query("EventStream").setFilter(filter)
-                .addSort("timestampMs", Query.SortDirection.DESCENDING);
+                .addSort("lastUpdatedTimeMs", Query.SortDirection.DESCENDING);
 
         List<Map<String, Object>> eventStreams = new LinkedList<>();
         for (Entity result : datastore.prepare(query).asList(
@@ -173,7 +188,7 @@ public class MyEndpoint {
     List<Map<String, Object>> listEventStreamsHelper(final String eventId) {
         Filter propertyFilter = new FilterPredicate("eventId", FilterOperator.EQUAL, eventId);
         Query query = new Query("EventStream").setFilter(propertyFilter)
-                .addSort("timestampMs", Query.SortDirection.DESCENDING);
+                .addSort("lastUpdatedTimeMs", Query.SortDirection.DESCENDING);
         List<Map<String, Object>> eventStreams = new LinkedList<>();
         for (Entity result : datastore.prepare(query).asList(
                 FetchOptions.Builder.withLimit(MAX_EVENT_STREAMS_TO_LIST))) {

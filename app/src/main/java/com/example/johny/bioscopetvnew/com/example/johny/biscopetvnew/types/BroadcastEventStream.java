@@ -11,5 +11,6 @@ public class BroadcastEventStream {
     private String eventId;
     private String encodedUrl;
     private String creator;
-    private long timestampMs;
+    private long creationTimeMs;
+    private long lastUpdatedTimeMs;
 }

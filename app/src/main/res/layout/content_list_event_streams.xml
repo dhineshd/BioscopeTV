@@ -4,7 +4,6 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="5dp"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
     tools:context="com.example.johny.bioscopetvnew.ListEventStreamsActivity"
     tools:showIn="@layout/activity_list_event_streams">
@@ -79,7 +78,7 @@
                 android:layout_gravity="center"
                 android:textColor="@android:color/white"
                 android:textSize="12sp"
-                android:text="Searching for live streams..."
+                android:text="Searching for streams..."
                 android:id="@+id/textview_stream_status"/>
 
             <ProgressBar

@@ -2,10 +2,34 @@
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_height="match_parent"
-    android:layout_width="match_parent">
+    android:layout_width="match_parent"
+    android:padding="10dp">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:textSize="20sp"
+        android:textColor="@android:color/white"
         android:id="@+id/list_item_event_textview"/>
+
+    <FrameLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true">
+
+        <TextView
+            android:layout_width="50dp"
+            android:layout_height="40dp"
+            android:gravity="center|center_vertical"
+            android:textColor="@android:color/holo_red_dark"
+            android:textSize="15sp"
+            android:text="2   "
+            android:textStyle="bold"
+            android:background="@drawable/video_icon"
+            android:layout_gravity="right"
+            android:id="@+id/list_item_textview_stream_count"/>
+
+    </FrameLayout>
+
+
 </RelativeLayout>

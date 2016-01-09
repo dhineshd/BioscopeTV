@@ -10,5 +10,6 @@ public class BroadcastEvent {
     private String eventId;
     private String eventName;
     private String creator;
-    private long timestampMs;
+    private long creationTimeMs;
+    private long lastUpdatedTimeMs;
 }
