@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String CLIENT_SECRET = "@E=FJIv8Tkmp8AG@Vh;e1QE!Msku-uVh?=hmguvStuVKW59sRx_HIJrDla=eDx8GsWBav=l8_sZ31hPz6qjKFRTdpKD@3SoX?;cqUn8trkxnnD;A6gIuuvD:0C466Gwx";
     private static final String TAG = "MainActivity";
     public static final String ROOT_URL = "https://bioscope-b2074.appspot.com/_ah/api";
+    //public static final String ROOT_URL = "http://192.168.0.2:8080/_ah/api";
     public static final String EVENT_KEY = "EVENT";
     private static final long REFRESH_INTERVAL_MS = 60000;
     private static final long REFRESH_CHECK_INTERVAL_MS = 20000;
@@ -291,7 +292,7 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 viewHolder.eventText.setText(event.getEventName() + "\ncreated by " + event.getCreator() +
-                        "\nat " + new Date(event.getTimestampMs()));
+                        "\nat " + new Date(event.getCreationTimeMs()));
 
             } catch (Exception e) {
                 Log.w(TAG, "Failed to load view for position = " + position);

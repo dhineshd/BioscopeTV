@@ -362,7 +362,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                     viewHolder.streamVideo.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
                         @Override
                         public void onPrepared(MediaPlayer mp) {
-                            Log.i(TAG, "OnPrepared completed!");
+                            Log.i(TAG, "OnPrepared completed! Duration = " + mp.getDuration());
                             mp.setVolume(0f, 0f);
                         }
                     });

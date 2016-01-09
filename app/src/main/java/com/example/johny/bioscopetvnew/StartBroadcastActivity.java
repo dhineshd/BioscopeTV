@@ -33,6 +33,7 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     private static final String TAG = "StartBroadcastActivity";
     private static final String BROADCAST_FRAGMENT_TAG = "BroadcastFragment";
     private static final String STREAM_ID_KEY = "STREAM_ID";
+    private static final long UPDATE_STREAM_STATUS_INTERVAL_MS = 10000;
 
     private long latestUserInteractionTimestampMs;
 
@@ -41,6 +42,8 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     private BroadcastEvent event;
     private Gson gson = new Gson();
     private String streamId;
+    private Handler streamStatusUpdateHandler;
+    private Runnable streamStatusUpdateRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +65,15 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
         }
 
         Log.i(TAG, "Fragment = " + mFragment);
+
+        streamStatusUpdateHandler = new Handler();
+        streamStatusUpdateRunnable = new Runnable() {
+            @Override
+            public void run() {
+                new UpdateEventStreamStatusTask().execute(streamId, String.valueOf(true));
+                streamStatusUpdateHandler.postDelayed(this, UPDATE_STREAM_STATUS_INTERVAL_MS);
+            }
+        };
     }
 
     @Override
@@ -141,13 +153,18 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
         }
     }
 
-    class UpdateEventStreamStatusToNotLiveTask extends AsyncTask<String, Void, Void> {
+    class UpdateEventStreamStatusTask extends AsyncTask<String, Void, Void> {
         @Override
         protected Void doInBackground(String... params) {
             String streamId = params[0];
+            boolean isLive = Boolean.valueOf(params[1]);
+
             try {
-                serviceClient.updateEventStream(streamId, false).execute();
-                Log.i(TAG, "Successfully updated event stream status to not live");
+                if (streamId != null) {
+                    serviceClient.updateEventStream(streamId, isLive).execute();
+                    Log.i(TAG, "Successfully updated event stream live status to " + isLive);
+                }
+
                 // TODO : Handle invalid streamId case which should throw server exception
             } catch (Exception e) {
                 Log.e(TAG, "Failed to update event stream for streamId = " + streamId);
@@ -175,7 +192,8 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     @Override
     public void onBroadcastStop() {
         Log.i(TAG, "Broadcast stopped!");
-        new UpdateEventStreamStatusToNotLiveTask().execute(streamId);
+        streamStatusUpdateHandler.removeCallbacks(streamStatusUpdateRunnable);
+        new UpdateEventStreamStatusTask().execute(streamId, String.valueOf(false));
         finish();
     }
 
@@ -233,6 +251,8 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
         protected void onPostExecute(String result) {
             streamId = result;
             Log.i(TAG, "Created event stream : streamId = " + streamId);
+
+            streamStatusUpdateHandler.post(streamStatusUpdateRunnable);
         }
     }
 
