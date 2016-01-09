@@ -7,11 +7,8 @@
         <item name="android:windowFullscreen">true</item>
 
         <!-- colors -->
-        <item name="android:windowBackground">@null</item>
-        <item name="android:colorBackground">@null</item>
-
-        <!-- enable window content transitions -->
-        <item name="android:windowContentTransitions">true</item>
+        <item name="android:windowBackground">@android:color/holo_blue_light</item>
+        <item name="android:colorBackground">@android:color/holo_blue_light</item>
 
     </style>
 

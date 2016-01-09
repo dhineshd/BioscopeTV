@@ -16,9 +16,10 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme" >
-        <activity android:name=".MainActivity"
-            android:screenOrientation="portrait"
-            >
+        <activity
+            android:name=".MainActivity"
+            android:screenOrientation="portrait">
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -27,11 +28,9 @@
         </activity>
         <activity
             android:name=".ListEventStreamsActivity"
-            android:label="@string/title_activity_list_event_streams"
             android:screenOrientation="landscape" />
         <activity
             android:name=".StartBroadcastActivity"
-            android:label="@string/title_activity_start_broadcast"
             android:screenOrientation="landscape" />
         <activity
             android:name=".PreferencesActivity"
