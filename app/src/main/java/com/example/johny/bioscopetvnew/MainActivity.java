@@ -57,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String ROOT_URL = "https://bioscope-b2074.appspot.com/_ah/api";
     //public static final String ROOT_URL = "http://192.168.0.2:8080/_ah/api";
     public static final String EVENT_KEY = "EVENT";
+    public static final String IS_LIVE_KEY = "IS_LIVE";
     private static final long REFRESH_CHECK_INTERVAL_MS = 20000;
     private long latestUserInteractionTimestampMs;
     private Handler refreshHandler;
@@ -145,7 +146,7 @@ public class MainActivity extends AppCompatActivity {
         listViewLiveEvents.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                displayActionChoicesToUser(liveEventsAdapter.getItem(position));
+                displayActionChoicesToUser(liveEventsAdapter.getItem(position), true);
             }
         });
 
@@ -156,13 +157,13 @@ public class MainActivity extends AppCompatActivity {
         listViewNonLiveEvents.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                displayActionChoicesToUser(nonLiveEventsAdapter.getItem(position));
+                displayActionChoicesToUser(nonLiveEventsAdapter.getItem(position), false);
             }
         });
 
     }
 
-    private void displayActionChoicesToUser(final BroadcastEvent event) {
+    private void displayActionChoicesToUser(final BroadcastEvent event, final boolean isLive) {
 
         if (isEventCreationAllowed()) {
             new AlertDialog.Builder(MainActivity.this)
@@ -171,6 +172,7 @@ public class MainActivity extends AppCompatActivity {
                         public void onClick(DialogInterface dialog, int which) {
                             Intent intent = new Intent(MainActivity.this, ListEventStreamsActivity.class);
                             intent.putExtra(EVENT_KEY, gson.toJson(event));
+                            intent.putExtra(IS_LIVE_KEY, isLive);
                             startActivity(intent);
                         }
                     }).setNegativeButton("Broadcast", new DialogInterface.OnClickListener() {

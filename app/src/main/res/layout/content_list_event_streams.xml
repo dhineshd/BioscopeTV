@@ -78,7 +78,7 @@
                 android:layout_gravity="center"
                 android:textColor="@android:color/white"
                 android:textSize="12sp"
-                android:text="Searching for live streams..."
+                android:text="Searching for streams..."
                 android:id="@+id/textview_stream_status"/>
 
             <ProgressBar

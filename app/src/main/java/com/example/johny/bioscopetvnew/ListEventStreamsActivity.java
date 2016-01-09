@@ -16,7 +16,6 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.GridView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -66,6 +65,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private Map<BroadcastEventStream, Long> eventLatestRefreshTimeMs = new HashMap<>();
     private BroadcastEventStream mainEventStream;
     private BroadcastEvent event;
+    private boolean isLiveEvent;
 
     private ImageButton tweetButton;
 
@@ -78,6 +78,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
         Intent intent = getIntent();
         event = gson.fromJson(intent.getStringExtra(MainActivity.EVENT_KEY), BroadcastEvent.class);
+        isLiveEvent = intent.getBooleanExtra(MainActivity.IS_LIVE_KEY, false);
 
         initializeClient();
 
@@ -101,7 +102,9 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
                 String tweetUrl =
                         String.format("https://twitter.com/intent/tweet?text=%s&url=%s",
-                                urlEncode(event.getEventName() +" is live on BioscopeTV! Catch the action from multiple angles!! @Thebioscopeapp"), urlEncode("http://wearebioscope.com"));
+                                urlEncode(event.getEventName() +" is live on BioscopeTV! " +
+                                        "Catch the action from multiple angles!! @Thebioscopeapp"),
+                                urlEncode("http://wearebioscope.com"));
                 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(tweetUrl));
 
                 // Narrow down to official Twitter app, if available:
@@ -256,8 +259,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         protected List<BroadcastEventStream> doInBackground(Void... params) {
 
             try {
-                // Get live streams only
-                String response = serviceClient.listEventStreams(event.getEventId(), true).execute().getData();
+                String response = serviceClient.listEventStreams(event.getEventId(), isLiveEvent).execute().getData();
                 Log.i(TAG, "Received ListEventStreams response = " + response);
                 final List<BroadcastEventStream> eventStreams =  gson.fromJson(response,
                         new TypeToken<List<BroadcastEventStream>>() {
@@ -275,7 +277,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
             if (eventStreams != null && !eventStreams.isEmpty()) {
                 textViewStreamSearchStatus.setVisibility(View.INVISIBLE);
-                textViewEventStatus.setVisibility(View.VISIBLE);
+                textViewEventStatus.setVisibility(isLiveEvent? View.VISIBLE : View.INVISIBLE);
             }
 
             // Remove expired streams from view
