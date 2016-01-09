@@ -40,6 +40,7 @@ import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -277,8 +278,10 @@ public class ListEventStreamsActivity extends AppCompatActivity {
             }
 
             // Remove expired streams from view
-            for (BroadcastEventStream liveStream : liveStreams) {
+            for (Iterator<BroadcastEventStream> it = liveStreams.iterator(); it.hasNext();) {
+                BroadcastEventStream liveStream = it.next();
                 if (!eventStreams.contains(liveStream)) {
+                    it.remove();//remove from livestreams
                     eventStreamListAdapter.remove(liveStream);
                     Log.i(TAG, "Removed non-live stream : streamId = " + liveStream.getStreamId());
                 }
@@ -317,7 +320,6 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
         @Override
         public void remove(BroadcastEventStream object) {
-            liveStreams.remove(object);
             super.remove(object);
         }
 
