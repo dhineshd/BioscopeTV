@@ -2,6 +2,7 @@ package com.example.johny.bioscopetvnew;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ResolveInfo;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -14,7 +15,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.GridView;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -33,6 +36,7 @@ import com.google.gson.reflect.TypeToken;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -62,6 +66,8 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private BroadcastEventStream mainEventStream;
     private BroadcastEvent event;
 
+    private ImageButton tweetButton;
+
     private BioscopeBroadcastService serviceClient;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,6 +91,29 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
         progressBarMainVideo = (ProgressBar) findViewById(R.id.progressbar_view_stream);
 
+        tweetButton = (ImageButton) findViewById(R.id.tweetButton);
+
+        tweetButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                String tweetUrl =
+                        String.format("https://twitter.com/intent/tweet?text=%s&url=%s",
+                                urlEncode(event.getEventName() +" is live on BioscopeTV! Catch the action from multiple angles!! @Thebioscopeapp"), urlEncode("http://wearebioscope.com"));
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(tweetUrl));
+
+                // Narrow down to official Twitter app, if available:
+                List<ResolveInfo> matches = getPackageManager().queryIntentActivities(intent, 0);
+                for (ResolveInfo info : matches) {
+                    if (info.activityInfo.packageName.toLowerCase().startsWith("com.twitter")) {
+                        intent.setPackage(info.activityInfo.packageName);
+                    }
+                }
+
+                startActivity(intent);
+            }
+        });
+
         eventStreamListAdapter = new EventStreamListAdapter(getApplicationContext());
         GridView listViewEventStreams = (GridView) findViewById(R.id.listview_event_streams);
         listViewEventStreams.setAdapter(eventStreamListAdapter);
@@ -104,6 +133,16 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 refreshHandler.postDelayed(this, REFRESH_CHECK_INTERVAL_MS);
             }
         };
+    }
+
+    public static String urlEncode(String s) {
+        try {
+            return URLEncoder.encode(s, "UTF-8");
+        }
+        catch (UnsupportedEncodingException e) {
+            Log.wtf(TAG, "UTF-8 should always be supported", e);
+            throw new RuntimeException("URLEncoder.encode() failed for " + s);
+        }
     }
 
     private void playStreamAsMainVideo(final BroadcastEventStream stream) {

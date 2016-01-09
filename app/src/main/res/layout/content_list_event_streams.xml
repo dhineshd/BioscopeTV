@@ -62,6 +62,16 @@
                 android:padding="5dp"
                 android:id="@+id/textview_event_status"/>
 
+            <ImageButton
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/tweetButton"
+                android:src="@mipmap/twitter_logo_blue"
+                android:background="@null"
+                android:layout_gravity="start|bottom"
+                android:padding="10dp"
+                />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
