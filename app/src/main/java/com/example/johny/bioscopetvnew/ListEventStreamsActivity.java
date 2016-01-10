@@ -64,7 +64,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private TextView textViewEventStatus;
     private TextView textViewStreamSearchStatus;
     private EventStreamListAdapter eventStreamListAdapter;
-    private Set<BroadcastEventStream> liveStreams = new HashSet<>();
+    private Set<BroadcastEventStream> streamsSet = new HashSet<>();
     private Set<AsyncTask> asyncTasks = new HashSet<>();
     private Map<BroadcastEventStream, Long> eventLatestRefreshTimeMs = new HashMap<>();
     private BroadcastEventStream mainEventStream;
@@ -164,9 +164,12 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
     private void playStreamAsMainVideo(final BroadcastEventStream stream) {
         Log.i(TAG, "Selected stream URL = " + stream.getEncodedUrl());
+
         mainEventStream = stream;
-        eventStreamListAdapter.notifyDataSetChanged();
         try {
+            if (videoView.isPlaying()) {
+                videoView.stopPlayback();
+            }
             videoView.setVideoURI(Uri.parse(URLDecoder.decode(stream.getEncodedUrl(), "UTF-8")));
             videoView.setOnInfoListener(new MediaPlayer.OnInfoListener() {
                 @Override
@@ -184,8 +187,8 @@ public class ListEventStreamsActivity extends AppCompatActivity {
             });
 
             videoView.start();
-        } catch (UnsupportedEncodingException e) {
-            Log.e(TAG, "Failed to decode encoded URL");
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to play main video from stream = " + stream);
         }
     }
 
@@ -313,7 +316,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
             }
 
             // Remove expired streams from view
-            for (Iterator<BroadcastEventStream> it = liveStreams.iterator(); it.hasNext();) {
+            for (Iterator<BroadcastEventStream> it = streamsSet.iterator(); it.hasNext();) {
                 BroadcastEventStream liveStream = it.next();
                 if (!eventStreams.contains(liveStream)) {
                     it.remove();//remove from livestreams
@@ -328,6 +331,11 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                     eventStreamListAdapter.add(stream);
                     Log.i(TAG, "Found non-live stream : streamId = " + stream.getStreamId());
                 }
+            }
+
+            // Update main video if the corresponding stream does appear in refreshed list
+            if (!streamsSet.isEmpty() && !streamsSet.contains(mainEventStream)) {
+                playStreamAsMainVideo(eventStreamListAdapter.getItem(0));
             }
         }
     }
@@ -381,13 +389,13 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
         @Override
         public void add(BroadcastEventStream object) {
-            if (!liveStreams.contains(object)) {
-                if (liveStreams.isEmpty()) {
+            if (!streamsSet.contains(object)) {
+                if (streamsSet.isEmpty()) {
                     ProgressBar progressBar = (ProgressBar) findViewById(R.id.progressbar_loading_streams);
                     progressBar.setVisibility(View.GONE);
                     playStreamAsMainVideo(object);
                 }
-                liveStreams.add(object);
+                streamsSet.add(object);
                 super.add(object);
             } else {
                 notifyDataSetChanged();
