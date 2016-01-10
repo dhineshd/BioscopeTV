@@ -297,6 +297,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 textViewStreamSearchStatus.setVisibility(View.INVISIBLE);
                 textViewEventStatus.setVisibility(isLiveEvent? View.VISIBLE : View.INVISIBLE);
                 textViewEventViewers.setVisibility(isLiveEvent? View.VISIBLE : View.INVISIBLE);
+                tweetButton.setVisibility(isLiveEvent? View.VISIBLE : View.INVISIBLE);
             }
 
             // Remove expired streams from view
