@@ -124,6 +124,7 @@ public class MyEndpoint {
     @ApiMethod(name = "createEventStream")
     public MyBean createEventStream(
             @Named("eventId") String eventId,
+            @Named("streamName") String streamName,
             @Named("encodedUrl") String encodedUrl,
             @Named("creator") String creator) {
 
@@ -151,6 +152,7 @@ public class MyEndpoint {
             Entity eventStream = new Entity("EventStream", streamId);
             eventStream.setProperty("streamId", streamId);
             eventStream.setProperty("eventId", eventId);
+            eventStream.setProperty("streamName", streamName);
             long currentTime = System.currentTimeMillis();
             eventStream.setProperty("creationTimeMs", currentTime);
             eventStream.setProperty("lastUpdatedTimeMs", currentTime);
