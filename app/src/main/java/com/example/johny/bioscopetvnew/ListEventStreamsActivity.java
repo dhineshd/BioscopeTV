@@ -305,7 +305,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 if (!eventStreams.contains(liveStream)) {
                     it.remove();//remove from livestreams
                     eventStreamListAdapter.remove(liveStream);
-                    Log.i(TAG, "Removed non-live stream : streamId = " + liveStream.getStreamId());
+                    Log.i(TAG, "Removed non-live stream : " + liveStream);
                 }
             }
 
@@ -370,12 +370,12 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         @Override
         public void add(BroadcastEventStream object) {
             if (!liveStreams.contains(object)) {
-                liveStreams.add(object);
-                if (liveStreams.size() == 1) {
+                if (liveStreams.isEmpty()) {
                     ProgressBar progressBar = (ProgressBar) findViewById(R.id.progressbar_loading_streams);
                     progressBar.setVisibility(View.GONE);
                     playStreamAsMainVideo(object);
                 }
+                liveStreams.add(object);
                 super.add(object);
             } else {
                 notifyDataSetChanged();

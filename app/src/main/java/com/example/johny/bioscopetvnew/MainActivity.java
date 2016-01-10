@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
     private Runnable refreshRunnable;
     private Gson gson = new Gson();
     private BioscopeBroadcastService serviceClient;
-    private AsyncTask listEventsTask;
+    private Set<AsyncTask> asyncTasks = new HashSet<>();
     //private Set<BroadcastEvent> events = new HashSet<>();
     private ProgressBar progressBarLoadingEvents;
     private Button createEventButton;
@@ -198,6 +198,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
+        refreshHandler.removeCallbacks(refreshRunnable);
     }
 
     @Override
@@ -205,6 +206,7 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
 
         createEventButton.setVisibility(isEventCreationAllowed() ? View.VISIBLE : View.INVISIBLE);
+        refreshHandler.post(refreshRunnable);
     }
     
     @Override
@@ -231,8 +233,8 @@ public class MainActivity extends AppCompatActivity {
     private void cleanup() {
         Log.i(TAG, "Performing cleanup..");
 
-        if (listEventsTask != null) {
-            listEventsTask.cancel(true);
+        for (AsyncTask task : asyncTasks) {
+            task.cancel(true);
         }
         if (refreshHandler != null) {
             refreshHandler.removeCallbacks(refreshRunnable);
@@ -240,10 +242,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void refreshListOfEvents() {
-        if (listEventsTask != null) {
-            listEventsTask.cancel(true);
+        for (AsyncTask task : asyncTasks) {
+            task.cancel(true);
         }
-        listEventsTask = new ListEventsTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        asyncTasks.add(new ListEventsTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR));
     }
 
     private void initializeClient() {
