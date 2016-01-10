@@ -8,9 +8,9 @@ import lombok.Data;
 @Data
 public class BroadcastEventStream {
     private String streamId;
+    private String streamName;
     private String eventId;
     private String encodedUrl;
     private String creator;
     private long creationTimeMs;
-    private long lastUpdatedTimeMs;
 }

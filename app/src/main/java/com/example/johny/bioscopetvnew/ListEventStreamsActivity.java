@@ -39,6 +39,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -86,7 +87,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         Intent intent = getIntent();
         Bundle extras = intent.getExtras();
         event = gson.fromJson(extras.getString(MainActivity.EVENT_KEY), BroadcastEvent.class);
-        isLiveEvent = Boolean.valueOf(extras.getString(MainActivity.IS_LIVE_KEY));
+        isLiveEvent = extras.getBoolean(MainActivity.IS_LIVE_KEY);
         Log.i(TAG, "isLiveEvent = " + isLiveEvent + " " + intent.getStringExtra(MainActivity.IS_LIVE_KEY));
 
         initializeClient();
@@ -283,6 +284,17 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                         new TypeToken<List<BroadcastEventStream>>() {
                         }.getType());
 
+                // Sort streams by name
+                Collections.sort(eventStreams, new Comparator<BroadcastEventStream>() {
+                    @Override
+                    public int compare(BroadcastEventStream lhs, BroadcastEventStream rhs) {
+                        if (lhs.getStreamName() != null && rhs.getStreamName() != null) {
+                            return lhs.getStreamName().compareToIgnoreCase(rhs.getStreamName());
+                        }
+                        return 0;
+                    }
+                });
+
                 return eventStreams;
             } catch (Exception e) {
                 Log.e(TAG, "Failed to list event streams", e);
@@ -297,6 +309,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 textViewStreamSearchStatus.setVisibility(View.INVISIBLE);
                 textViewEventStatus.setVisibility(isLiveEvent? View.VISIBLE : View.INVISIBLE);
                 textViewEventViewers.setVisibility(isLiveEvent? View.VISIBLE : View.INVISIBLE);
+                tweetButton.setVisibility(isLiveEvent? View.VISIBLE : View.INVISIBLE);
             }
 
             // Remove expired streams from view
@@ -305,7 +318,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 if (!eventStreams.contains(liveStream)) {
                     it.remove();//remove from livestreams
                     eventStreamListAdapter.remove(liveStream);
-                    Log.i(TAG, "Removed non-live stream : streamId = " + liveStream.getStreamId());
+                    Log.i(TAG, "Removed non-live stream : " + liveStream);
                 }
             }
 
@@ -316,7 +329,6 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                     Log.i(TAG, "Found non-live stream : streamId = " + stream.getStreamId());
                 }
             }
-
         }
     }
 
@@ -370,12 +382,12 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         @Override
         public void add(BroadcastEventStream object) {
             if (!liveStreams.contains(object)) {
-                liveStreams.add(object);
-                if (liveStreams.size() == 1) {
+                if (liveStreams.isEmpty()) {
                     ProgressBar progressBar = (ProgressBar) findViewById(R.id.progressbar_loading_streams);
                     progressBar.setVisibility(View.GONE);
                     playStreamAsMainVideo(object);
                 }
+                liveStreams.add(object);
                 super.add(object);
             } else {
                 notifyDataSetChanged();
@@ -402,7 +414,13 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 } else {
                     viewHolder = (ViewHolder) convertView.getTag();
                 }
+
+                // Set stream info (name etc)
+                String streamName = eventStream.getStreamName();
+                viewHolder.streamInfo.setText(streamName == null ? "" : streamName);
+
                 Uri url = Uri.parse(URLDecoder.decode(eventStream.getEncodedUrl(), "UTF-8"));
+
                 if (eventStream.equals(mainEventStream)) {
                     viewHolder.streamVideo.setBackground(getDrawable(R.drawable.rectangle));
                 } else {
@@ -433,9 +451,6 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                         }
                     });
                     viewHolder.streamVideo.start();
-//                    MediaMetadataRetriever mmr = new MediaMetadataRetriever();
-//                    mmr.setDataSource(url.toString(), Collections.EMPTY_MAP);
-//                    viewHolder.streamThumbnail.setImageBitmap(mmr.getFrameAtTime(0));
 
                     Log.i(TAG, "Performing thumbnail update for position = " + position);
                 } else {
@@ -450,8 +465,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
         private ViewHolder createViewHolder(final View view) {
             ViewHolder viewHolder = new ViewHolder();
-            //viewHolder.streamInfo = (TextView) view.findViewById(R.id.list_item_event_stream_textview);
-            viewHolder.streamThumbnail = (ImageView) view.findViewById(R.id.list_item_event_stream_imageview);
+            viewHolder.streamInfo = (TextView) view.findViewById(R.id.list_item_event_stream_textview);
             viewHolder.streamVideo = (VideoView) view.findViewById(R.id.list_item_event_stream_videoview);
             viewHolder.progressBar = (ProgressBar) view.findViewById(R.id.list_item_event_stream_progressbar);
             return viewHolder;

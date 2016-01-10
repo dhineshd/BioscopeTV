@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
+import android.text.InputFilter;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -56,16 +57,21 @@ public class MainActivity extends AppCompatActivity {
     private static final String CLIENT_SECRET = "@E=FJIv8Tkmp8AG@Vh;e1QE!Msku-uVh?=hmguvStuVKW59sRx_HIJrDla=eDx8GsWBav=l8_sZ31hPz6qjKFRTdpKD@3SoX?;cqUn8trkxnnD;A6gIuuvD:0C466Gwx";
     private static final String TAG = "MainActivity";
     public static final String ROOT_URL = "https://bioscope-b2074.appspot.com/_ah/api";
-    //public static final String ROOT_URL = "http://192.168.0.2:8080/_ah/api";
+    // Use this URL for testing against non-prod versions of backend.
+    // So, URL for version 2 of https://abc.appspot.com is https://2.abc.appspot.com
+    //public static final String ROOT_URL = "http://bioscope-b2074.appspot.com/_ah/api";
     public static final String EVENT_KEY = "EVENT";
+    public static final String STREAM_NAME_KEY = "STREAM_NAME";
     public static final String IS_LIVE_KEY = "IS_LIVE";
     private static final long REFRESH_CHECK_INTERVAL_MS = 20000;
+    private static final int EVENT_NAME_MAX_LENGTH = 20;
+    private static final int STREAM_NAME_MAX_LENGTH = 10;
     private long latestUserInteractionTimestampMs;
     private Handler refreshHandler;
     private Runnable refreshRunnable;
     private Gson gson = new Gson();
     private BioscopeBroadcastService serviceClient;
-    private AsyncTask listEventsTask;
+    private Set<AsyncTask> asyncTasks = new HashSet<>();
     //private Set<BroadcastEvent> events = new HashSet<>();
     private ProgressBar progressBarLoadingEvents;
     private Button createEventButton;
@@ -107,6 +113,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
 
                 final EditText input = new EditText(MainActivity.this);
+                input.setFilters(new InputFilter[] {new InputFilter.LengthFilter(EVENT_NAME_MAX_LENGTH)});
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
                         LinearLayout.LayoutParams.MATCH_PARENT);
@@ -177,15 +184,40 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }).setNegativeButton("Broadcast", new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface dialog, int which) {
-
-                    Intent intent = new Intent(MainActivity.this, StartBroadcastActivity.class);
-                    intent.putExtra(EVENT_KEY, gson.toJson(event));
-                    startActivity(intent);
+                    showCreateStreamDialog(event);
                 }
             }).show();
         } else {
             startListEventStreamActivity(event, isLive);
         }
+    }
+
+    private void showCreateStreamDialog(final BroadcastEvent event) {
+        final EditText input = new EditText(MainActivity.this);
+        input.setFilters(new InputFilter[] {new InputFilter.LengthFilter(STREAM_NAME_MAX_LENGTH)});
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT);
+        input.setLayoutParams(lp);
+        new AlertDialog.Builder(MainActivity.this)
+                .setTitle("Enter stream name")
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        String streamName = input.getText().toString();
+                        Log.i(TAG, "Stream name = " + streamName);
+                        Intent intent = new Intent(MainActivity.this, StartBroadcastActivity.class);
+                        intent.putExtra(EVENT_KEY, gson.toJson(event));
+                        intent.putExtra(STREAM_NAME_KEY, streamName);
+                        startActivity(intent);
+                    }
+                })
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+
+                    }
+                })
+                .setView(input)
+                .show();
     }
 
     private void startListEventStreamActivity(final BroadcastEvent event, final boolean isLive) {
@@ -198,6 +230,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
+        refreshHandler.removeCallbacks(refreshRunnable);
     }
 
     @Override
@@ -205,6 +238,7 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
 
         createEventButton.setVisibility(isEventCreationAllowed() ? View.VISIBLE : View.INVISIBLE);
+        refreshHandler.post(refreshRunnable);
     }
     
     @Override
@@ -231,8 +265,8 @@ public class MainActivity extends AppCompatActivity {
     private void cleanup() {
         Log.i(TAG, "Performing cleanup..");
 
-        if (listEventsTask != null) {
-            listEventsTask.cancel(true);
+        for (AsyncTask task : asyncTasks) {
+            task.cancel(true);
         }
         if (refreshHandler != null) {
             refreshHandler.removeCallbacks(refreshRunnable);
@@ -240,10 +274,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void refreshListOfEvents() {
-        if (listEventsTask != null) {
-            listEventsTask.cancel(true);
+        for (AsyncTask task : asyncTasks) {
+            task.cancel(true);
         }
-        listEventsTask = new ListEventsTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        asyncTasks.add(new ListEventsTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR));
     }
 
     private void initializeClient() {
@@ -367,10 +401,13 @@ public class MainActivity extends AppCompatActivity {
                 Integer liveStreamCount = eventLiveStreamCount.get(event);
 
                 if (liveStreamCount != null && liveStreamCount > 0) {
+                    viewHolder.streamCountBg.setVisibility(View.VISIBLE);
                     viewHolder.streamCountText.setVisibility(View.VISIBLE);
                     viewHolder.streamCountText.setText(String.valueOf(liveStreamCount) + "    ");
                 } else {
                     viewHolder.streamCountText.setVisibility(View.INVISIBLE);
+                    viewHolder.streamCountBg.setVisibility(View.INVISIBLE);
+
                 }
 
             } catch (Exception e) {
@@ -384,6 +421,7 @@ public class MainActivity extends AppCompatActivity {
             ViewHolder viewHolder = new ViewHolder();
             viewHolder.eventText = (TextView) view.findViewById(R.id.list_item_event_textview);
             viewHolder.streamCountText = (TextView) view.findViewById(R.id.list_item_textview_stream_count);
+            viewHolder.streamCountBg = (TextView) view.findViewById(R.id.list_item_textview_video_icon_bg);
             return viewHolder;
         }
     }
@@ -392,6 +430,7 @@ public class MainActivity extends AppCompatActivity {
     private static class ViewHolder {
         TextView eventText;
         TextView streamCountText;
+        TextView streamCountBg;
     }
 
     class CreateEventTask extends AsyncTask<String, Void, String> {

@@ -42,6 +42,7 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     private BroadcastEvent event;
     private Gson gson = new Gson();
     private String streamId;
+    private String streamName;
     private Handler streamStatusUpdateHandler;
     private Runnable streamStatusUpdateRunnable;
 
@@ -54,6 +55,7 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
 
         Intent intent = getIntent();
         event = gson.fromJson(intent.getStringExtra(MainActivity.EVENT_KEY), BroadcastEvent.class);
+        streamName = intent.getStringExtra(MainActivity.STREAM_NAME_KEY);
 
         setupBroadcast(event);
 
@@ -185,7 +187,7 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
         if (isFinishing()) {
             Log.i(TAG, "Not creating stream since we are finishing..");
         } else {
-            new CreateEventStreamTask().execute(event.getEventId(), stream.getStreamUrl());
+            new CreateEventStreamTask().execute(event.getEventId(), streamName, stream.getStreamUrl());
         }
     }
 
@@ -239,8 +241,10 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
         protected String doInBackground(String... params) {
             try {
                 String eventId = params[0];
-                String url = URLEncoder.encode(params[1], "UTF-8");
-                return serviceClient.createEventStream(eventId, url, Build.MODEL).execute().getData();
+                String streamName = params[1];
+                String url = URLEncoder.encode(params[2], "UTF-8");
+                return serviceClient.createEventStream(eventId, streamName,
+                        url, Build.MODEL).execute().getData();
             } catch (IOException e) {
                 Log.e(TAG, "Failed to create eventStream", e);
                 return e.getMessage();
