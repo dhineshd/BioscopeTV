@@ -26,6 +26,7 @@ import android.widget.VideoView;
 import com.bioscope.tv.backend.bioscopeBroadcastService.BioscopeBroadcastService;
 import com.example.johny.bioscopetvnew.com.example.johny.biscopetvnew.types.BroadcastEvent;
 import com.example.johny.bioscopetvnew.com.example.johny.biscopetvnew.types.BroadcastEventStream;
+import com.example.johny.bioscopetvnew.com.example.johny.biscopetvnew.types.EventStats;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.extensions.android.json.AndroidJsonFactory;
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest;
@@ -50,6 +51,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private static final long REFRESH_INTERVAL_MS = 60000;
     private static final long REFRESH_CHECK_INTERVAL_MS = 30000;
 
+    private String userId;
     private long latestUserInteractionTimestampMs;
     private Handler refreshHandler;
     private Runnable refreshRunnable;
@@ -57,16 +59,18 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private Gson gson = new Gson();
     private VideoView videoView;
     private TextView textViewEventName;
+    private TextView textViewEventViewers;
     private TextView textViewEventStatus;
     private TextView textViewStreamSearchStatus;
     private ProgressBar progressBarMainVideo;
     private EventStreamListAdapter eventStreamListAdapter;
     private Set<BroadcastEventStream> liveStreams = new HashSet<>();
-    private AsyncTask listStreamsTask;
+    private Set<AsyncTask> asyncTasks = new HashSet<>();
     private Map<BroadcastEventStream, Long> eventLatestRefreshTimeMs = new HashMap<>();
     private BroadcastEventStream mainEventStream;
     private BroadcastEvent event;
     private boolean isLiveEvent;
+    private int viewerCountForEvent = 1; // Min value is 1 since current user is a viewer
 
     private ImageButton tweetButton;
 
@@ -77,17 +81,23 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_list_event_streams);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        userId = ((BioscopeTVApplication) getApplication()).getUserId();
+
         Intent intent = getIntent();
-        event = gson.fromJson(intent.getStringExtra(MainActivity.EVENT_KEY), BroadcastEvent.class);
-        isLiveEvent = intent.getBooleanExtra(MainActivity.IS_LIVE_KEY, false);
+        Bundle extras = intent.getExtras();
+        event = gson.fromJson(extras.getString(MainActivity.EVENT_KEY), BroadcastEvent.class);
+        isLiveEvent = Boolean.valueOf(extras.getString(MainActivity.IS_LIVE_KEY));
+        Log.i(TAG, "isLiveEvent = " + isLiveEvent + " " + intent.getStringExtra(MainActivity.IS_LIVE_KEY));
 
         initializeClient();
 
         videoView = (VideoView) findViewById(R.id.videoview_view_stream);
 
-        textViewEventName = (TextView) findViewById(R.id.textview_view_stream);
-
+        textViewEventName = (TextView) findViewById(R.id.textview_event_title);
         textViewEventName.setText(event.getEventName());
+
+        textViewEventViewers = (TextView) findViewById(R.id.textview_event_viewers);
+        textViewEventViewers.setText(viewerCountForEvent + "");
 
         textViewEventStatus = (TextView) findViewById(R.id.textview_event_status);
 
@@ -220,8 +230,10 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private void cleanup() {
         Log.i(TAG, "Performing cleanup..");
 
-        if (listStreamsTask != null) {
-            listStreamsTask.cancel(true);
+        for (AsyncTask task : asyncTasks) {
+            if (task != null) {
+                task.cancel(true);
+            }
         }
         if (refreshHandler != null) {
             refreshHandler.removeCallbacks(refreshRunnable);
@@ -230,10 +242,15 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
     private void refreshListOfEventStreams() {
         // Cancel any running tasks
-        if (listStreamsTask != null) {
-            listStreamsTask.cancel(true);
+        for (AsyncTask task : asyncTasks) {
+            if (task != null) {
+                task.cancel(true);
+            }
         }
-        listStreamsTask = new ListEventStreamsTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+
+        asyncTasks.add(new ListEventStreamsTask().execute());
+        asyncTasks.add(new UpdateEventStatsTask().execute(event.getEventId(), userId));
+        asyncTasks.add(new GetEventStatsTask().execute(event.getEventId()));
     }
 
     private void initializeClient() {
@@ -279,6 +296,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
             if (eventStreams != null && !eventStreams.isEmpty()) {
                 textViewStreamSearchStatus.setVisibility(View.INVISIBLE);
                 textViewEventStatus.setVisibility(isLiveEvent? View.VISIBLE : View.INVISIBLE);
+                textViewEventViewers.setVisibility(isLiveEvent? View.VISIBLE : View.INVISIBLE);
             }
 
             // Remove expired streams from view
@@ -299,6 +317,48 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 }
             }
 
+        }
+    }
+
+    private class UpdateEventStatsTask extends AsyncTask<String, Void, Void> {
+
+        @Override
+        protected Void doInBackground(String... params) {
+            String eventId = params[0];
+            String viewerId = params[1];
+            try {
+                serviceClient.updateEventStats(eventId, viewerId).execute();
+                Log.i(TAG, "Successfully updated event stats for eventId = " + eventId);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to update event stats for eventId = " + eventId, e);
+            }
+            return null;
+        }
+    }
+
+    private class GetEventStatsTask extends AsyncTask<String, Void, EventStats> {
+
+        @Override
+        protected EventStats doInBackground(String... params) {
+            String eventId = params[0];
+            try {
+                return gson.fromJson(serviceClient.getEventStats(eventId).execute().getData(), EventStats.class);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to get event stats for eventId = " + eventId, e);
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(EventStats eventStats) {
+            super.onPostExecute(eventStats);
+
+            if (eventStats != null) {
+                viewerCountForEvent = Math.max(1, eventStats.getViewerCount());
+            }
+            Log.i(TAG, "Number of viewers for event = " + viewerCountForEvent);
+
+            textViewEventViewers.setText("" + viewerCountForEvent);
         }
     }
 
