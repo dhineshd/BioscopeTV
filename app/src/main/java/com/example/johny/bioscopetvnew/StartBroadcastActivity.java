@@ -57,6 +57,8 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
         event = gson.fromJson(intent.getStringExtra(MainActivity.EVENT_KEY), BroadcastEvent.class);
         streamName = intent.getStringExtra(MainActivity.STREAM_NAME_KEY);
 
+        setTitle(streamName);
+
         setupBroadcast(event);
 
         if (savedInstanceState == null) {
@@ -245,9 +247,9 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
                 String url = URLEncoder.encode(params[2], "UTF-8");
                 return serviceClient.createEventStream(eventId, streamName,
                         url, Build.MODEL).execute().getData();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 Log.e(TAG, "Failed to create eventStream", e);
-                return e.getMessage();
+                return null;
             }
         }
 
