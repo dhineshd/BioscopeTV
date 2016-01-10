@@ -8,8 +8,8 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="com.example.johny.bioscopetvnew.permission.C2D_MESSAGE" />
-    <permission android:name="com.example.johny.bioscopetvnew.permission.C2D_MESSAGE" android:protectionLevel="signature" />
+    <uses-permission android:name="tv.bioscope.android.permission.C2D_MESSAGE" />
+    <permission android:name="tv.bioscope.android.permission.C2D_MESSAGE" android:protectionLevel="signature" />
 
     <application
         android:name=".BioscopeTVApplication"

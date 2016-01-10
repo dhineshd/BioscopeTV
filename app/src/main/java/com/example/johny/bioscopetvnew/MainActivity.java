@@ -255,7 +255,7 @@ public class MainActivity extends AppCompatActivity {
         // Instantiate Konotor.
         Konotor.getInstance(getApplicationContext())
                 .withWelcomeMessage("Hola! Hope you are enjoying BioscopeTV." +
-                        " We would love to hear your feedback to help us improve.")
+                        " We are currently in Beta. We would love to hear your feedback to help us improve.")
                 .withSupportName("BioscopeTV")
                 .withLaunchMainActivityOnFinish(true) // to launch your app on hitting the back button on Konotor's inbox interface, in case the app was not running already
                 .init(BioscopeTVApplication.KONOTOR_APP_ID, BioscopeTVApplication.KONOTOR_APP_KEY);
