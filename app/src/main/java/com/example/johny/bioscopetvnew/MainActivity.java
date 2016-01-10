@@ -401,10 +401,13 @@ public class MainActivity extends AppCompatActivity {
                 Integer liveStreamCount = eventLiveStreamCount.get(event);
 
                 if (liveStreamCount != null && liveStreamCount > 0) {
+                    viewHolder.streamCountBg.setVisibility(View.VISIBLE);
                     viewHolder.streamCountText.setVisibility(View.VISIBLE);
                     viewHolder.streamCountText.setText(String.valueOf(liveStreamCount) + "    ");
                 } else {
                     viewHolder.streamCountText.setVisibility(View.INVISIBLE);
+                    viewHolder.streamCountBg.setVisibility(View.INVISIBLE);
+
                 }
 
             } catch (Exception e) {
@@ -418,6 +421,7 @@ public class MainActivity extends AppCompatActivity {
             ViewHolder viewHolder = new ViewHolder();
             viewHolder.eventText = (TextView) view.findViewById(R.id.list_item_event_textview);
             viewHolder.streamCountText = (TextView) view.findViewById(R.id.list_item_textview_stream_count);
+            viewHolder.streamCountBg = (TextView) view.findViewById(R.id.list_item_textview_video_icon_bg);
             return viewHolder;
         }
     }
@@ -426,6 +430,7 @@ public class MainActivity extends AppCompatActivity {
     private static class ViewHolder {
         TextView eventText;
         TextView streamCountText;
+        TextView streamCountBg;
     }
 
     class CreateEventTask extends AsyncTask<String, Void, String> {
