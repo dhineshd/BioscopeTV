@@ -62,7 +62,6 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private TextView textViewEventViewers;
     private TextView textViewEventStatus;
     private TextView textViewStreamSearchStatus;
-    private ProgressBar progressBarMainVideo;
     private EventStreamListAdapter eventStreamListAdapter;
     private Set<BroadcastEventStream> liveStreams = new HashSet<>();
     private Set<AsyncTask> asyncTasks = new HashSet<>();
@@ -72,6 +71,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private boolean isLiveEvent;
     private int viewerCountForEvent = 1; // Min value is 1 since current user is a viewer
 
+    private TextView mainVideoBufferingStreamTextView;
     private ImageButton tweetButton;
 
     private BioscopeBroadcastService serviceClient;
@@ -91,6 +91,8 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
         initializeClient();
 
+        mainVideoBufferingStreamTextView = (TextView) findViewById(R.id.textview_stream_buffering);
+
         videoView = (VideoView) findViewById(R.id.videoview_view_stream);
 
         textViewEventName = (TextView) findViewById(R.id.textview_event_title);
@@ -103,8 +105,6 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
         textViewStreamSearchStatus = (TextView) findViewById(R.id.textview_stream_status);
 
-        progressBarMainVideo = (ProgressBar) findViewById(R.id.progressbar_view_stream);
-
         tweetButton = (ImageButton) findViewById(R.id.tweetButton);
 
         tweetButton.setOnClickListener(new View.OnClickListener() {
@@ -115,7 +115,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                         String.format("https://twitter.com/intent/tweet?text=%s&url=%s",
                                 urlEncode(event.getEventName() +" is live on BioscopeTV! " +
                                         "Catch the action from multiple angles!! @Thebioscopeapp"),
-                                urlEncode("http://wearebioscope.com"));
+                                urlEncode("goo.gl/xRee5b"));
                 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(tweetUrl));
 
                 // Narrow down to official Twitter app, if available:
@@ -171,11 +171,11 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 @Override
                 public boolean onInfo(MediaPlayer mp, int what, int extra) {
                     if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) {
-                        progressBarMainVideo.setVisibility(View.VISIBLE);
+                        mainVideoBufferingStreamTextView.setVisibility(View.VISIBLE);
                         Log.i(TAG, "Buffering just started!");
                     } else if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
                         Log.i(TAG, "Received first video frame!");
-                        progressBarMainVideo.setVisibility(View.GONE);
+                        mainVideoBufferingStreamTextView.setVisibility(View.GONE);
                     }
                     //viewHolder.progressBar.setVisibility(mp.isPlaying()? View.INVISIBLE : View.VISIBLE);
                     return true;

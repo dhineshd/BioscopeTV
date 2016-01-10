@@ -97,12 +97,17 @@
                 android:text="Searching for streams..."
                 android:id="@+id/textview_stream_status"/>
 
-            <ProgressBar
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:textSize="20sp"
+                android:background="@android:color/holo_orange_light"
+                android:textColor="@android:color/white"
+                android:text="Buffering..."
                 android:visibility="invisible"
-                android:layout_gravity="center"
-                android:id="@+id/progressbar_view_stream"/>
+                android:layout_gravity="center|bottom"
+                android:padding="5dp"
+                android:id="@+id/textview_stream_buffering"/>
 
         </FrameLayout>
 
