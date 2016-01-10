@@ -86,7 +86,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         Intent intent = getIntent();
         Bundle extras = intent.getExtras();
         event = gson.fromJson(extras.getString(MainActivity.EVENT_KEY), BroadcastEvent.class);
-        isLiveEvent = Boolean.valueOf(extras.getString(MainActivity.IS_LIVE_KEY));
+        isLiveEvent = extras.getBoolean(MainActivity.IS_LIVE_KEY);
         Log.i(TAG, "isLiveEvent = " + isLiveEvent + " " + intent.getStringExtra(MainActivity.IS_LIVE_KEY));
 
         initializeClient();
