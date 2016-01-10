@@ -166,6 +166,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         Log.i(TAG, "Selected stream URL = " + stream.getEncodedUrl());
 
         mainEventStream = stream;
+        eventStreamListAdapter.notifyDataSetChanged();
         try {
             if (videoView.isPlaying()) {
                 videoView.stopPlayback();
