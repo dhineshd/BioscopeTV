@@ -29,6 +29,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bioscope.tv.backend.bioscopeBroadcastService.BioscopeBroadcastService;
+import com.demach.konotor.Konotor;
 import com.example.johny.bioscopetvnew.com.example.johny.biscopetvnew.types.BroadcastEvent;
 import com.example.johny.bioscopetvnew.com.example.johny.biscopetvnew.types.BroadcastEventStream;
 import com.google.api.client.extensions.android.http.AndroidHttp;
@@ -84,6 +85,8 @@ public class MainActivity extends AppCompatActivity {
     private Executor eventStatusCheckExecutor = Executors.newSingleThreadExecutor();
     private Map<BroadcastEvent, Integer> eventLiveStreamCount = new HashMap<>();
 
+    private ImageButton feedbackButton;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -94,6 +97,15 @@ public class MainActivity extends AppCompatActivity {
         Kickflip.setup(this, CLIENT_ID, CLIENT_SECRET);
 
         initializeClient();
+
+        feedbackButton = (ImageButton) findViewById(R.id.button_feedback);
+
+        feedbackButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, FeedbackActivity.class));
+            }
+        });
 
         progressBarLoadingEvents = (ProgressBar) findViewById(R.id.progressbar_loading_events);
 
@@ -239,6 +251,18 @@ public class MainActivity extends AppCompatActivity {
 
         createEventButton.setVisibility(isEventCreationAllowed() ? View.VISIBLE : View.INVISIBLE);
         refreshHandler.post(refreshRunnable);
+
+        // Instantiate Konotor.
+        Konotor.getInstance(getApplicationContext())
+                .withWelcomeMessage("Hola! Hope you are enjoying BioscopeTV." +
+                        " We would love to hear your feedback to help us improve.")
+                .withSupportName("BioscopeTV")
+                .withLaunchMainActivityOnFinish(true) // to launch your app on hitting the back button on Konotor's inbox interface, in case the app was not running already
+                .init(BioscopeTVApplication.KONOTOR_APP_ID, BioscopeTVApplication.KONOTOR_APP_KEY);
+
+        Konotor.getInstance(getApplicationContext())
+                .withUserMeta("app_name", "BioscopeTV") //example to segment users on type of user
+                .update();
     }
     
     @Override
