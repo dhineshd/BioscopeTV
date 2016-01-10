@@ -8,8 +8,8 @@ android {
         applicationId "tv.bioscope.android"
         minSdkVersion 19
         targetSdkVersion 22
-        versionCode 8
-        versionName "8"
+        versionCode 9
+        versionName "9"
 
     }
     buildTypes {
