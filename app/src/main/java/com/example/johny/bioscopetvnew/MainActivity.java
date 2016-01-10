@@ -147,6 +147,7 @@ public class MainActivity extends AppCompatActivity {
         listViewLiveEvents.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Log.i(TAG, "Clicked on live event");
                 displayActionChoicesToUser(liveEventsAdapter.getItem(position), true);
             }
         });
@@ -158,6 +159,7 @@ public class MainActivity extends AppCompatActivity {
         listViewNonLiveEvents.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Log.i(TAG, "Clicked on non-live event");
                 displayActionChoicesToUser(nonLiveEventsAdapter.getItem(position), false);
             }
         });

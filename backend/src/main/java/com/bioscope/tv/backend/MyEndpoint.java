@@ -42,6 +42,8 @@ public class MyEndpoint {
     private static final int MAX_EVENTS_TO_LIST = 5;
     private static final int MAX_EVENT_STREAMS_TO_LIST = 5;
     private static final long MAX_ACCEPTABLE_STALENESS_FOR_LIVE_STREAM_MS = 60000;
+    private static final long MAX_ACCEPTABLE_STALENESS_FOR_EVENT_STATS_MS = 30000;
+
 
     private DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
 
@@ -65,6 +67,57 @@ public class MyEndpoint {
 
         response.setData(eventId);
         return response;
+    }
+
+    /** A method to view event stats */
+    @ApiMethod(name = "getEventStats")
+    public MyBean getEventStats(@Named("eventId") String eventId) {
+        MyBean response = new MyBean();
+
+        // TODO : Check if event exists and throw exception otherwise
+
+        Filter eventFilter = new FilterPredicate("eventId", FilterOperator.EQUAL, eventId);
+        Filter freshnessFilter = new FilterPredicate("lastUpdatedTimeMs",
+                FilterOperator.GREATER_THAN,
+                System.currentTimeMillis() - MAX_ACCEPTABLE_STALENESS_FOR_EVENT_STATS_MS);
+        Filter filter = Query.CompositeFilterOperator.and(eventFilter, freshnessFilter);
+
+        Query query = new Query("EventStats").setFilter(filter);
+        int viewerCount = datastore.prepare(query).countEntities(FetchOptions.Builder.withDefaults());
+
+        EventStats eventStats = new EventStats();
+        eventStats.viewerCount = viewerCount;
+
+        response.setData(gson.toJson(eventStats));
+        return response;
+    }
+
+    /** A method to update event stats */
+    @ApiMethod(name = "updateEventStats", path = "update_event_stats/{eventId}/{viewerId}")
+    public MyBean updateEventStats(@Named("eventId") String eventId, @Named("viewerId") String viewerId) {
+        MyBean response = new MyBean();
+
+        Key eventStatsKey = KeyFactory.createKey("EventStats", viewerId);
+        Entity eventStats = null;
+        try {
+            eventStats = datastore.get(eventStatsKey);
+            eventStats.setProperty("lastUpdatedTimeMs", System.currentTimeMillis());
+        } catch (EntityNotFoundException e) {
+            // Create nee entity
+            eventStats = new Entity("EventStats", viewerId);
+            eventStats.setProperty("viewerId", viewerId);
+            eventStats.setProperty("eventId", eventId);
+            long currentTime = System.currentTimeMillis();
+            eventStats.setProperty("creationTimeMs", currentTime);
+            eventStats.setProperty("lastUpdatedTimeMs", currentTime);
+        }
+        datastore.put(eventStats);
+
+        return response;
+    }
+
+    private class EventStats {
+        int viewerCount;
     }
 
     /** A method to create a stream for a given event */
@@ -114,7 +167,7 @@ public class MyEndpoint {
 
     /** A method to update stream info for a given event */
     @ApiMethod(name = "updateEventStream")
-    public MyBean updateEventStreamStatus(
+    public MyBean updateEventStream(
             @Named("streamId") String streamId,
             @Named("isLive") boolean isLive) {
 

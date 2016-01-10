@@ -46,7 +46,23 @@
                 android:shadowDx="2"
                 android:shadowDy="2"
                 android:shadowRadius="2"
-                android:id="@+id/textview_view_stream"/>
+                android:id="@+id/textview_event_title"/>
+
+            <TextView
+                android:layout_width="35dp"
+                android:layout_height="35dp"
+                android:textStyle="bold"
+                android:textSize="15sp"
+                android:layout_gravity="end|top"
+                android:gravity="bottom|center"
+                android:textColor="@android:color/holo_red_dark"
+                android:background="@drawable/user_icon"
+                android:shadowColor="@android:color/black"
+                android:shadowDx="2"
+                android:shadowDy="2"
+                android:shadowRadius="2"
+                android:visibility="invisible"
+                android:id="@+id/textview_event_viewers"/>
 
             <TextView
                 android:layout_width="wrap_content"

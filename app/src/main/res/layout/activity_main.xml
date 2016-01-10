@@ -44,12 +44,6 @@
             android:layout_below="@id/linearlayout_live_events_bar"
             android:id="@+id/listview_live_events" />
 
-        <ProgressBar
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/progressbar_loading_events"
-            android:layout_centerInParent="true" />
-
     </RelativeLayout>
 
 
@@ -89,6 +83,12 @@
             android:id="@+id/button_create_event"/>
 
 
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/progressbar_loading_events"
+            android:layout_centerInParent="true" />
 
     </RelativeLayout>
 
