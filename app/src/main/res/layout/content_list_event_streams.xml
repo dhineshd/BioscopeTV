@@ -35,12 +35,40 @@
 
             </RelativeLayout>
 
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textStyle="bold"
+                    android:textSize="20sp"
+                    android:background="@android:color/holo_red_dark"
+                    android:textColor="@android:color/white"
+                    android:text="Live"
+                    android:visibility="invisible"
+                    android:layout_alignParentStart="true"
+                    android:padding="5dp"
+                    android:id="@+id/textview_event_status"/>
+
+                <ImageButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/tweetButton"
+                    android:src="@drawable/twitter_logo_blue"
+                    android:background="@null"
+                    android:visibility="invisible"
+                    android:layout_toRightOf="@+id/textview_event_status"
+                    android:padding="5dp" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textStyle="bold"
                 android:textSize="20sp"
-                android:layout_gravity="center|top"
+                android:layout_centerInParent="true"
                 android:textColor="@android:color/white"
                 android:shadowColor="@android:color/black"
                 android:shadowDx="2"
@@ -53,6 +81,7 @@
                 android:layout_height="35dp"
                 android:textStyle="bold"
                 android:textSize="15sp"
+                android:layout_alignParentEnd="true"
                 android:layout_gravity="end|top"
                 android:gravity="bottom|center"
                 android:textColor="@android:color/holo_red_dark"
@@ -64,29 +93,9 @@
                 android:visibility="invisible"
                 android:id="@+id/textview_event_viewers"/>
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textStyle="bold"
-                android:textSize="20sp"
-                android:background="@android:color/holo_red_dark"
-                android:textColor="@android:color/white"
-                android:text="Live"
-                android:visibility="invisible"
-                android:layout_gravity="start|top"
-                android:padding="5dp"
-                android:id="@+id/textview_event_status"/>
 
-            <ImageButton
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/tweetButton"
-                android:src="@drawable/twitter_logo_blue"
-                android:background="@null"
-                android:visibility="invisible"
-                android:layout_gravity="start|bottom"
-                android:padding="10dp"
-                />
+
+
 
             <TextView
                 android:layout_width="wrap_content"
@@ -97,13 +106,14 @@
                 android:textSize="12sp"
                 android:text="Searching for streams..."
                 android:id="@+id/textview_stream_status"/>
+            </RelativeLayout>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="20sp"
-                android:background="@android:color/holo_orange_light"
-                android:textColor="@android:color/white"
+                android:textSize="15sp"
+                android:background="@null"
+                android:textColor="@android:color/holo_orange_light"
                 android:text="Buffering..."
                 android:visibility="invisible"
                 android:layout_gravity="center|bottom"
