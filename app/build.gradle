@@ -1,3 +1,5 @@
+import com.android.build.gradle.AppPlugin
+
 apply plugin: 'com.android.application'
 
 android {

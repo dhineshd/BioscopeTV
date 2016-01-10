@@ -20,6 +20,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
@@ -90,7 +91,7 @@ public class MainActivity extends AppCompatActivity {
 
         progressBarLoadingEvents = (ProgressBar) findViewById(R.id.progressbar_loading_events);
 
-        Button settingsButton = (Button) findViewById(R.id.button_settings);
+        ImageButton settingsButton = (ImageButton) findViewById(R.id.button_settings);
 
         settingsButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -170,10 +171,7 @@ public class MainActivity extends AppCompatActivity {
                     .setTitle("Select action")
                     .setPositiveButton("View", new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
-                            Intent intent = new Intent(MainActivity.this, ListEventStreamsActivity.class);
-                            intent.putExtra(EVENT_KEY, gson.toJson(event));
-                            intent.putExtra(IS_LIVE_KEY, isLive);
-                            startActivity(intent);
+                            startListEventStreamActivity(event, isLive);
                         }
                     }).setNegativeButton("Broadcast", new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface dialog, int which) {
@@ -184,10 +182,15 @@ public class MainActivity extends AppCompatActivity {
                 }
             }).show();
         } else {
-            Intent intent = new Intent(MainActivity.this, ListEventStreamsActivity.class);
-            intent.putExtra(EVENT_KEY, gson.toJson(event));
-            startActivity(intent);
+            startListEventStreamActivity(event, isLive);
         }
+    }
+
+    private void startListEventStreamActivity(final BroadcastEvent event, final boolean isLive) {
+        Intent intent = new Intent(MainActivity.this, ListEventStreamsActivity.class);
+        intent.putExtra(EVENT_KEY, gson.toJson(event));
+        intent.putExtra(IS_LIVE_KEY, isLive);
+        startActivity(intent);
     }
 
     @Override
@@ -199,7 +202,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        createEventButton.setVisibility(isEventCreationAllowed()? View.VISIBLE : View.INVISIBLE);
+        createEventButton.setVisibility(isEventCreationAllowed() ? View.VISIBLE : View.INVISIBLE);
     }
     
     @Override

@@ -65,7 +65,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/tweetButton"
-                android:src="@mipmap/twitter_logo_blue"
+                android:src="@drawable/twitter_logo_blue"
                 android:background="@null"
                 android:layout_gravity="start|bottom"
                 android:padding="10dp"

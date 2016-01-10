@@ -44,7 +44,9 @@
 
     <RelativeLayout
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:paddingBottom="10dp"
+        >
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -75,13 +77,16 @@
             android:layout_alignParentBottom="true"
             android:id="@+id/button_create_event"/>
 
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+        <ImageButton
+            android:layout_width="35dp"
+            android:layout_height="35dp"
             android:layout_gravity="right"
             android:layout_alignParentBottom="true"
-            android:layout_alignParentEnd="true"
-            android:text="Settings"
+            android:layout_alignParentRight="true"
+            android:background="@null"
+            android:scaleType="fitCenter"
+            android:paddingRight="10dp"
+            android:src="@drawable/settings_icon_4x"
             android:id="@+id/button_settings"/>
 
     </RelativeLayout>

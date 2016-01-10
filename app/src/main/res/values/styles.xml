@@ -7,8 +7,8 @@
         <item name="android:windowFullscreen">true</item>
 
         <!-- colors -->
-        <item name="android:windowBackground">@android:color/holo_blue_light</item>
-        <item name="android:colorBackground">@android:color/holo_blue_light</item>
+        <item name="android:windowBackground">@color/bioscope_teal</item>
+        <item name="android:colorBackground">@color/bioscope_teal</item>
 
     </style>
 
