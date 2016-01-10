@@ -430,7 +430,11 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 Uri url = Uri.parse(URLDecoder.decode(eventStream.getEncodedUrl(), "UTF-8"));
 
                 if (eventStream.equals(mainEventStream)) {
-                    viewHolder.streamVideo.setBackground(getDrawable(R.drawable.rectangle));
+                    if(android.os.Build.VERSION.SDK_INT >= 21){
+                        viewHolder.streamVideo.setBackground(getDrawable(R.drawable.rectangle));
+                    } else {
+                        viewHolder.streamVideo.setBackground(getResources().getDrawable(R.drawable.rectangle));
+                    }
                 } else {
                     viewHolder.streamVideo.setBackground(null);
                 }
