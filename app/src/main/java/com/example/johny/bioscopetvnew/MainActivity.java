@@ -472,9 +472,9 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(String result) {
-            String notificationText = "Event created!";
+            String notificationText = "Event created.";
             if (result == null) {
-                notificationText = "Event creation failed.";
+                notificationText = "Event creation failed!";
             }
             refreshListOfEvents();
             Toast.makeText(getApplicationContext(), notificationText, Toast.LENGTH_LONG).show();

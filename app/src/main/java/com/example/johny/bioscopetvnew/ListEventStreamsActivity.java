@@ -166,7 +166,11 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         Log.i(TAG, "Selected stream URL = " + stream.getEncodedUrl());
 
         mainEventStream = stream;
+
+        // Refresh to ensure stream we play in main video shows up as the selected
+        // // (rectangle) in the list of streams
         eventStreamListAdapter.notifyDataSetChanged();
+
         try {
             if (videoView.isPlaying()) {
                 videoView.stopPlayback();
