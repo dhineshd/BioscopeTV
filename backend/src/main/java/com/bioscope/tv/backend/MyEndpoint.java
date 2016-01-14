@@ -20,6 +20,9 @@ import com.google.appengine.api.datastore.Query;
 import com.google.appengine.api.datastore.Query.Filter;
 import com.google.appengine.api.datastore.Query.FilterOperator;
 import com.google.appengine.api.datastore.Query.FilterPredicate;
+import com.google.appengine.api.taskqueue.Queue;
+import com.google.appengine.api.taskqueue.QueueFactory;
+import com.google.appengine.api.taskqueue.TaskOptions;
 import com.google.appengine.repackaged.com.google.gson.Gson;
 
 import java.util.LinkedList;
@@ -161,10 +164,25 @@ public class MyEndpoint {
             eventStream.setProperty("isLive", true);
 
             datastore.put(eventStream);
+
+            //Create an asynchronous task (to be processed in GCE) to generate thumbnails for stream
+            // and write them to data store
+            EventStream stream = new EventStream();
+            stream.encodedUrl = encodedUrl;
+            stream.streamId = streamId;
+            Queue q = QueueFactory.getQueue("pull-queue");
+            q.add(TaskOptions.Builder.withMethod(TaskOptions.Method.PULL)
+                    .payload(gson.toJson(stream)));
         }
 
         response.setData(streamId);
         return response;
+    }
+
+    private class EventStream {
+        String streamId;
+        String encodedUrl;
+
     }
 
     /** A method to update stream info for a given event */

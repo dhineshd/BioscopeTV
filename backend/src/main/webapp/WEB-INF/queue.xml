@@ -1,0 +1,10 @@
+<queue-entries>
+    <queue>
+        <name>pull-queue</name>
+        <mode>pull</mode>
+        <acl>
+            <user-email>bioscope@bioscope-b2074.iam.gserviceaccount.com</user-email>      <!-- can list, get, lease, delete, and update tasks -->
+            <writer-email>bioscope@bioscope-b2074.iam.gserviceaccount.com</writer-email> <!-- can insert tasks -->
+        </acl>
+    </queue>
+</queue-entries>

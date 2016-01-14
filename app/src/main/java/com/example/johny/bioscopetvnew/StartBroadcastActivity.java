@@ -209,13 +209,13 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     private void setupBroadcast(final BroadcastEvent event) {
         String outputLocation = new File(getApplicationContext().getFilesDir(), "index.m3u8").getAbsolutePath();
         Kickflip.setSessionConfig(new SessionConfig.Builder(outputLocation)
-                .withVideoBitrate(300 * 1000)
+                .withVideoBitrate(100 * 1000)
                         //.withAudioBitrate()
                 .withPrivateVisibility(false)
                 .withLocation(false)
                 .withTitle(event.getEventName())
-                .withVideoResolution(640, 360)
-                .withAdaptiveStreaming(true)
+                .withVideoResolution(160, 90)
+                .withAdaptiveStreaming(false)
                 .build());
         Kickflip.setBroadcastListener(this);
     }
