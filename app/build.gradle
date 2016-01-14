@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
         applicationId "tv.bioscope.android"
-        minSdkVersion 19
+        minSdkVersion 18
         targetSdkVersion 22
         versionCode 10
         versionName "10"

@@ -17,8 +17,6 @@ public class FeedbackActivity extends AppCompatActivity {
 
         Konotor.getInstance(getApplicationContext())
                 .launchFeedbackScreen(this);
-
-        finish();
     }
 
     @Override

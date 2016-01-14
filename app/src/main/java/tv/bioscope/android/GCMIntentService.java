@@ -1,4 +1,4 @@
-package com.example.johny.bioscopetvnew;
+package tv.bioscope.android;
 
 /**
  * Created by rohitraghunathan on 1/10/16.
@@ -6,6 +6,7 @@ package com.example.johny.bioscopetvnew;
 
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 
 import com.demach.konotor.Konotor;
 import com.demach.konotor.access.K;
