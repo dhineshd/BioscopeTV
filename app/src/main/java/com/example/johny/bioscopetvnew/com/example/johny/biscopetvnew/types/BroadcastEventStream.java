@@ -13,4 +13,5 @@ public class BroadcastEventStream {
     private String encodedUrl;
     private String creator;
     private long creationTimeMs;
+    private EncodedThumbnail encodedThumbnail;
 }

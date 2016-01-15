@@ -4,7 +4,9 @@
         <mode>pull</mode>
         <acl>
             <user-email>bioscope@bioscope-b2074.iam.gserviceaccount.com</user-email>      <!-- can list, get, lease, delete, and update tasks -->
+            <user-email>appchameleon@gmail.com</user-email>
             <writer-email>bioscope@bioscope-b2074.iam.gserviceaccount.com</writer-email> <!-- can insert tasks -->
+            <writer-email>appchameleon@gmail.com</writer-email>
         </acl>
     </queue>
 </queue-entries>

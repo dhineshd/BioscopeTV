@@ -1,2 +1,2 @@
-include ':app', ':backend'
+include ':app', ':backend', ':taskqueue-worker'
 include ':submodules:kickflip-android-sdk:sdk'

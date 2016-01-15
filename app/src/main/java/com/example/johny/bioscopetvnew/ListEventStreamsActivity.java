@@ -3,19 +3,24 @@ package com.example.johny.bioscopetvnew;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ResolveInfo;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Base64;
 import android.util.Log;
+import android.util.LruCache;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.FrameLayout;
 import android.widget.GridView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -26,6 +31,7 @@ import android.widget.VideoView;
 import com.bioscope.tv.backend.bioscopeBroadcastService.BioscopeBroadcastService;
 import com.example.johny.bioscopetvnew.com.example.johny.biscopetvnew.types.BroadcastEvent;
 import com.example.johny.bioscopetvnew.com.example.johny.biscopetvnew.types.BroadcastEventStream;
+import com.example.johny.bioscopetvnew.com.example.johny.biscopetvnew.types.EncodedThumbnail;
 import com.example.johny.bioscopetvnew.com.example.johny.biscopetvnew.types.EventStats;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.extensions.android.json.AndroidJsonFactory;
@@ -40,17 +46,16 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+
+import lombok.ToString;
 
 public class ListEventStreamsActivity extends AppCompatActivity {
     private static final String TAG = "ListEventStreams";
-    private static final long REFRESH_INTERVAL_MS = 60000;
-    private static final long REFRESH_CHECK_INTERVAL_MS = 30000;
+    private static final long REFRESH_INTERVAL_MS = 5000;
 
     private String userId;
     private long latestUserInteractionTimestampMs;
@@ -66,7 +71,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private EventStreamListAdapter eventStreamListAdapter;
     private Set<BroadcastEventStream> streamsSet = new HashSet<>();
     private Set<AsyncTask> asyncTasks = new HashSet<>();
-    private Map<BroadcastEventStream, Long> eventLatestRefreshTimeMs = new HashMap<>();
+    private LruCache<String, Bitmap> streamThumbnailCache;
     private BroadcastEventStream mainEventStream;
     private BroadcastEvent event;
     private boolean isLiveEvent;
@@ -88,7 +93,6 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         Bundle extras = intent.getExtras();
         event = gson.fromJson(extras.getString(MainActivity.EVENT_KEY), BroadcastEvent.class);
         isLiveEvent = extras.getBoolean(MainActivity.IS_LIVE_KEY);
-        Log.i(TAG, "isLiveEvent = " + isLiveEvent + " " + intent.getStringExtra(MainActivity.IS_LIVE_KEY));
 
         initializeClient();
 
@@ -147,7 +151,24 @@ public class ListEventStreamsActivity extends AppCompatActivity {
             @Override
             public void run() {
                 refreshListOfEventStreams();
-                refreshHandler.postDelayed(this, REFRESH_CHECK_INTERVAL_MS);
+                refreshHandler.postDelayed(this, REFRESH_INTERVAL_MS);
+            }
+        };
+
+        // Get max available VM memory, exceeding this amount will throw an
+        // OutOfMemory exception. Stored in kilobytes as LruCache takes an
+        // int in its constructor.
+        final int maxMemory = (int) (Runtime.getRuntime().maxMemory() / 1024);
+
+        // Use 1/8th of the available memory for this memory cache.
+        final int cacheSize = maxMemory / 8;
+
+        streamThumbnailCache = new LruCache<String, Bitmap>(cacheSize) {
+            @Override
+            protected int sizeOf(String key, Bitmap bitmap) {
+                // The cache size will be measured in kilobytes rather than
+                // number of items.
+                return bitmap.getByteCount() / 1024;
             }
         };
     }
@@ -338,7 +359,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 }
             }
 
-            // Update main video if the corresponding stream does appear in refreshed list
+            // Update main video if the corresponding stream doesnt appear in refreshed list
             if (!streamsSet.isEmpty() && !streamsSet.contains(mainEventStream)) {
                 playStreamAsMainVideo(eventStreamListAdapter.getItem(0));
             }
@@ -400,6 +421,11 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                     progressBar.setVisibility(View.GONE);
                     playStreamAsMainVideo(object);
                 }
+                EncodedThumbnail encodedThumbnail = object.getEncodedThumbnail();
+                if (encodedThumbnail != null && encodedThumbnail.getValue() != null) {
+                    Bitmap thumbnailImage = decodeBase64(object.getEncodedThumbnail().getValue());
+                    streamThumbnailCache.put(object.getStreamId(), thumbnailImage);
+                }
                 streamsSet.add(object);
                 super.add(object);
             } else {
@@ -407,9 +433,9 @@ public class ListEventStreamsActivity extends AppCompatActivity {
             }
         }
 
-        @Override
-        public void remove(BroadcastEventStream object) {
-            super.remove(object);
+        private Bitmap decodeBase64(final String input) {
+            byte[] decodedByte = Base64.decode(input, 0);
+            return BitmapFactory.decodeByteArray(decodedByte, 0, decodedByte.length);
         }
 
         @Override
@@ -432,47 +458,23 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 String streamName = eventStream.getStreamName();
                 viewHolder.streamInfo.setText(streamName == null ? "" : streamName);
 
-                Uri url = Uri.parse(URLDecoder.decode(eventStream.getEncodedUrl(), "UTF-8"));
+                Log.i(TAG, "thumbnail imageview = " + viewHolder.streamThumbnail);
 
-                if (eventStream.equals(mainEventStream)) {
+                // Show thumbnail
+                Bitmap thumbnailImage = streamThumbnailCache.get(eventStream.getStreamId());
+                viewHolder.streamThumbnail.setImageBitmap(thumbnailImage);
+
+                // Show rectangle around currently playing stream
+                if (eventStream.getStreamId().equals(mainEventStream.getStreamId())) {
                     if(android.os.Build.VERSION.SDK_INT >= 21){
-                        viewHolder.streamVideo.setBackground(getDrawable(R.drawable.rectangle));
+                        viewHolder.itemLayout.setBackground(getDrawable(R.drawable.rectangle));
                     } else {
-                        viewHolder.streamVideo.setBackground(getResources().getDrawable(R.drawable.rectangle));
+                        viewHolder.itemLayout.setBackground(getResources().getDrawable(R.drawable.rectangle));
                     }
                 } else {
-                    viewHolder.streamVideo.setBackground(null);
+                    viewHolder.itemLayout.setBackground(null);
                 }
-                if (shouldRefreshThumbnail(eventStream, position)) {
-                    viewHolder.streamVideo.setVideoURI(url);
-                    viewHolder.streamVideo.setOnInfoListener(new MediaPlayer.OnInfoListener() {
-                        @Override
-                        public boolean onInfo(MediaPlayer mp, int what, int extra) {
-                            if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) {
-                                viewHolder.progressBar.setVisibility(View.VISIBLE);
-                                Log.i(TAG, "Buffering just started!");
-                            } else if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
-                                Log.i(TAG, "Received first video frame!");
-                                viewHolder.progressBar.setVisibility(View.GONE);
-                                mp.pause();
-                                eventLatestRefreshTimeMs.put(eventStream, System.currentTimeMillis());
-                            }
-                            return true;
-                        }
-                    });
-                    viewHolder.streamVideo.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                        @Override
-                        public void onPrepared(MediaPlayer mp) {
-                            Log.i(TAG, "OnPrepared completed! Duration = " + mp.getDuration());
-                            mp.setVolume(0f, 0f);
-                        }
-                    });
-                    viewHolder.streamVideo.start();
 
-                    Log.i(TAG, "Performing thumbnail update for position = " + position);
-                } else {
-                    Log.i(TAG, "Skipping thumbnail update for position = " + position);
-                }
             } catch (Exception e) {
                 Log.w(TAG, "Failed to load view for position = " + position, e);
             }
@@ -482,26 +484,19 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
         private ViewHolder createViewHolder(final View view) {
             ViewHolder viewHolder = new ViewHolder();
+            viewHolder.itemLayout = (FrameLayout) view.findViewById(R.id.list_item_event_stream_framelayout);
             viewHolder.streamInfo = (TextView) view.findViewById(R.id.list_item_event_stream_textview);
-            viewHolder.streamVideo = (VideoView) view.findViewById(R.id.list_item_event_stream_videoview);
-            viewHolder.progressBar = (ProgressBar) view.findViewById(R.id.list_item_event_stream_progressbar);
+            viewHolder.streamThumbnail = (ImageView) view.findViewById(R.id.list_item_event_stream_imageview);
             return viewHolder;
-        }
-
-        private boolean shouldRefreshThumbnail(final BroadcastEventStream stream, final int position) {
-            Long latestRefreshTimeMs = eventLatestRefreshTimeMs.get(stream);
-            return (latestRefreshTimeMs == null ||
-                    (System.currentTimeMillis() - latestRefreshTimeMs > REFRESH_INTERVAL_MS));
-
         }
     }
 
     // Not using getter/setter or Lombok for optimization
+    @ToString
     private static class ViewHolder {
+        FrameLayout itemLayout;
         TextView streamInfo;
-        VideoView streamVideo;
         ImageView streamThumbnail;
-        ProgressBar progressBar;
     }
 
 }

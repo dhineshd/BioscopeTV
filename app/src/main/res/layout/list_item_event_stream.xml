@@ -4,7 +4,8 @@
     android:layout_height="match_parent"
     android:layout_width="match_parent"
     android:orientation="vertical"
-    android:padding="5dp"
+    android:layout_gravity="center"
+    android:paddingBottom="5dp"
     android:gravity="center"
     android:descendantFocusability="blocksDescendants">
 
@@ -12,26 +13,23 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textColor="@android:color/white"
+        android:layout_gravity="center"
         android:id="@+id/list_item_event_stream_textview"/>
 
     <FrameLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
+        android:layout_width="99dp"
+        android:layout_height="57dp"
+        android:layout_gravity="center"
+        android:id="@+id/list_item_event_stream_framelayout">
 
-        <VideoView
-            android:layout_gravity="center"
+        <ImageView
             android:layout_width="96dp"
             android:layout_height="54dp"
-            android:visibility="visible"
-            android:id="@+id/list_item_event_stream_videoview"/>
-
-        <ProgressBar
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:visibility="invisible"
-            android:id="@+id/list_item_event_stream_progressbar"/>
+            android:src="@drawable/bioscope_launch_icon_full_tail"
+            android:id="@+id/list_item_event_stream_imageview" />
 
     </FrameLayout>
+
 
 </LinearLayout>

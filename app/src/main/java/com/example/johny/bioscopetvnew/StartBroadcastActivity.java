@@ -33,7 +33,7 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     private static final String TAG = "StartBroadcastActivity";
     private static final String BROADCAST_FRAGMENT_TAG = "BroadcastFragment";
     private static final String STREAM_ID_KEY = "STREAM_ID";
-    private static final long UPDATE_STREAM_STATUS_INTERVAL_MS = 10000;
+    private static final long UPDATE_STREAM_STATUS_INTERVAL_MS = 5000;
 
     private long latestUserInteractionTimestampMs;
 
@@ -209,13 +209,12 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     private void setupBroadcast(final BroadcastEvent event) {
         String outputLocation = new File(getApplicationContext().getFilesDir(), "index.m3u8").getAbsolutePath();
         Kickflip.setSessionConfig(new SessionConfig.Builder(outputLocation)
-                .withVideoBitrate(100 * 1000)
-                        //.withAudioBitrate()
+                .withVideoBitrate(300 * 1000)
                 .withPrivateVisibility(false)
                 .withLocation(false)
                 .withTitle(event.getEventName())
-                .withVideoResolution(160, 90)
-                .withAdaptiveStreaming(false)
+                .withVideoResolution(640, 360)
+                .withAdaptiveStreaming(true)
                 .build());
         Kickflip.setBroadcastListener(this);
     }

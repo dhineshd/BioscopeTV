@@ -58,13 +58,13 @@ public class MainActivity extends AppCompatActivity {
     private static final String CLIENT_SECRET = "@E=FJIv8Tkmp8AG@Vh;e1QE!Msku-uVh?=hmguvStuVKW59sRx_HIJrDla=eDx8GsWBav=l8_sZ31hPz6qjKFRTdpKD@3SoX?;cqUn8trkxnnD;A6gIuuvD:0C466Gwx";
     private static final String TAG = "MainActivity";
     public static final String ROOT_URL = "https://bioscope-b2074.appspot.com/_ah/api";
-    // Use this URL for testing against non-prod versions of backend.
-    // So, URL for version 2 of https://abc.appspot.com is https://2.abc.appspot.com
-    //public static final String ROOT_URL = "http://bioscope-b2074.appspot.com/_ah/api";
+    // Use this URL for testing against non-prod versions of backend (only 1 non-prod version will be available)
+    // So, URL for version 2 of https://abc.appspot.com is https://v2-dot-abc.appspot.com
+    //public static final String ROOT_URL = "https://v2-dot-bioscope-b2074.appspot.com/_ah/api";
     public static final String EVENT_KEY = "EVENT";
     public static final String STREAM_NAME_KEY = "STREAM_NAME";
     public static final String IS_LIVE_KEY = "IS_LIVE";
-    private static final long REFRESH_CHECK_INTERVAL_MS = 20000;
+    private static final long REFRESH_INTERVAL_MS = 5000;
     private static final int EVENT_NAME_MAX_LENGTH = 20;
     private static final int STREAM_NAME_MAX_LENGTH = 10;
     private long latestUserInteractionTimestampMs;
@@ -73,18 +73,14 @@ public class MainActivity extends AppCompatActivity {
     private Gson gson = new Gson();
     private BioscopeBroadcastService serviceClient;
     private Set<AsyncTask> asyncTasks = new HashSet<>();
-    //private Set<BroadcastEvent> events = new HashSet<>();
     private ProgressBar progressBarLoadingEvents;
     private Button createEventButton;
-    //private ListView listViewLiveEvents;
-    //private ListView listViewNonLiveEvents;
     private EventListAdapter liveEventsAdapter;
     private EventListAdapter nonLiveEventsAdapter;
     private Set<BroadcastEvent> liveEvents = new HashSet<>();
     private Set<BroadcastEvent> nonLiveEvents = new HashSet<>();
     private Executor eventStatusCheckExecutor = Executors.newSingleThreadExecutor();
     private Map<BroadcastEvent, Integer> eventLiveStreamCount = new HashMap<>();
-
     private ImageButton feedbackButton;
 
     @Override
@@ -154,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 refreshListOfEvents();
-                refreshHandler.postDelayed(this, REFRESH_CHECK_INTERVAL_MS);
+                refreshHandler.postDelayed(this, REFRESH_INTERVAL_MS);
             }
         };
         refreshHandler.post(refreshRunnable);

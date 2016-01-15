@@ -165,14 +165,7 @@ public class MyEndpoint {
 
             datastore.put(eventStream);
 
-            //Create an asynchronous task (to be processed in GCE) to generate thumbnails for stream
-            // and write them to data store
-            EventStream stream = new EventStream();
-            stream.encodedUrl = encodedUrl;
-            stream.streamId = streamId;
-            Queue q = QueueFactory.getQueue("pull-queue");
-            q.add(TaskOptions.Builder.withMethod(TaskOptions.Method.PULL)
-                    .payload(gson.toJson(stream)));
+            createGenerateThumbnailTask(streamId, encodedUrl);
         }
 
         response.setData(streamId);
@@ -183,6 +176,18 @@ public class MyEndpoint {
         String streamId;
         String encodedUrl;
 
+    }
+
+    private void createGenerateThumbnailTask(final String streamId, final String encodedUrl) {
+
+        // Create an asynchronous task (to be processed in GCE) to generate thumbnails for stream
+        // and write them to data store
+        EventStream stream = new EventStream();
+        stream.encodedUrl = encodedUrl;
+        stream.streamId = streamId;
+        Queue q = QueueFactory.getQueue("pull-queue");
+        q.add(TaskOptions.Builder.withMethod(TaskOptions.Method.PULL)
+                .payload(gson.toJson(stream)));
     }
 
     /** A method to update stream info for a given event */
@@ -201,6 +206,33 @@ public class MyEndpoint {
             stream = datastore.get(streamKey);
             stream.setProperty("isLive", isLive);
             stream.setProperty("lastUpdatedTimeMs", System.currentTimeMillis());
+            datastore.put(stream);
+
+            createGenerateThumbnailTask(streamId, (String) stream.getProperty("encodedUrl"));
+
+        } catch (EntityNotFoundException e) {
+            // ignore (to be handled as part of input validation)
+        }
+
+        return response;
+    }
+
+    /** A method to update stream info for a given event */
+    @ApiMethod(name = "updateEventStreamThumbnail", path = "update_event_stream_thumbnail/{streamId}/{encodedThumbnail}")
+    public MyBean updateEventStreamThumbnail(
+            @Named("streamId") String streamId,
+            @Named("encodedThumbnail") String encodedThumbnail) {
+
+        // TODO : Check if stream exists and throw exception otherwise
+
+        MyBean response = new MyBean();
+
+        Key streamKey = KeyFactory.createKey("EventStream", streamId);
+        Entity stream = null;
+        try {
+            stream = datastore.get(streamKey);
+            stream.setProperty("encodedThumbnail", encodedThumbnail);
+            stream.setProperty("lastThumbnailUpdatedTimeMs", System.currentTimeMillis());
             datastore.put(stream);
         } catch (EntityNotFoundException e) {
             // ignore (to be handled as part of input validation)
