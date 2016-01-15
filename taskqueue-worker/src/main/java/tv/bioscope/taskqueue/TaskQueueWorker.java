@@ -42,12 +42,12 @@ import com.google.appengine.repackaged.com.google.gson.Gson;
 import com.google.appengine.tools.remoteapi.RemoteApiInstaller;
 import com.google.appengine.tools.remoteapi.RemoteApiOptions;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URLDecoder;
-import java.util.Base64;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.Executor;
@@ -112,9 +112,11 @@ public class TaskQueueWorker {
 
         RemoteApiInstaller installer = new RemoteApiInstaller();
         try {
-            installer.install(options);
+            installer.installOnAllThreads(options);
             dataStore = DatastoreServiceFactory.getDatastoreService();
-        } catch (IOException e) {
+        } catch (Exception e) {
+            System.out.println("Failed to initialize DataStore");
+            e.printStackTrace();
         }
     }
 
@@ -164,7 +166,7 @@ public class TaskQueueWorker {
         // authorization
         Credential credential = authorize();
 
-        //initializeClient();
+        initializeDatastore();
 
         // set up Taskqueue
         final Taskqueue taskQueue = new Taskqueue.Builder(
@@ -262,15 +264,14 @@ public class TaskQueueWorker {
       }
       System.out.println("Executing task..");
       String payload = null;
+      EventStream eventStream = gson.fromJson(payload, EventStream.class);
+      File file = new File("/tmp/" + eventStream.streamId + UUID.randomUUID() + ".jpg");
+
       try {
-          payload = new String(Base64.getDecoder().decode(task.getPayloadBase64()), "UTF-8");
-
-          EventStream eventStream = gson.fromJson(payload, EventStream.class);
-
+          payload = new String(Base64.decodeBase64(task.getPayloadBase64().getBytes()), "UTF-8");
           String streamUrl = URLDecoder.decode(eventStream.encodedUrl, "UTF-8");
           System.out.println("Stream ID = " + eventStream.streamId);
           System.out.println("Stream URL = " + streamUrl);
-          File file = new File("/tmp/" + eventStream.streamId + UUID.randomUUID() + ".jpg");
           if (file.exists()) {
               file.delete();
           }
@@ -284,17 +285,10 @@ public class TaskQueueWorker {
           p.waitFor();
           if (p.exitValue() == 0 && file.exists()) {
               System.out.println("Thumbnail generation succesful!");
-              String encodedImage =  Base64.getEncoder().encodeToString(FileUtils.readFileToByteArray(file));
+              String encodedImage =  new String(Base64.encodeBase64(FileUtils.readFileToByteArray(file)), "UTF-8");
               System.out.println("Encoded image size = " + encodedImage.length());
 
-              Key streamKey = null;
-              try {
-                  streamKey = KeyFactory.createKey("EventStream", eventStream.streamId);
-              } catch (NullPointerException e) {
-                  // DataStore not initialized
-                  initializeDatastore();
-                  streamKey = KeyFactory.createKey("EventStream", eventStream.streamId);
-              }
+              Key streamKey = KeyFactory.createKey("EventStream", eventStream.streamId);
               try {
                   Entity stream = dataStore.get(streamKey);
                   stream.setProperty("encodedThumbnail", new Text(encodedImage));
@@ -305,12 +299,15 @@ public class TaskQueueWorker {
                   // ignore (to be handled as part of input validation)
               }
 
-              file.delete();
           }
 
       } catch (Exception e) {
           System.out.println("Failed to process payload! Cause = " +  e.getClass());
           e.printStackTrace();
+      } finally {
+          if (file.exists()) {
+              file.delete();
+          }
       }
   }
 
