@@ -64,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String EVENT_KEY = "EVENT";
     public static final String STREAM_NAME_KEY = "STREAM_NAME";
     public static final String IS_LIVE_KEY = "IS_LIVE";
+    public static final String PRIVATE_EVENT_PREFIX = "test";
     private static final long REFRESH_INTERVAL_MS = 5000;
     private static final int EVENT_NAME_MAX_LENGTH = 20;
     private static final int STREAM_NAME_MAX_LENGTH = 10;
@@ -183,7 +184,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void displayActionChoicesToUser(final BroadcastEvent event, final boolean isLive) {
 
-        if (isEventCreationAllowed()) {
+        if (isAdmin()) {
             new AlertDialog.Builder(MainActivity.this)
                     .setTitle("Select action")
                     .setPositiveButton("View", new DialogInterface.OnClickListener() {
@@ -245,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        createEventButton.setVisibility(isEventCreationAllowed() ? View.VISIBLE : View.INVISIBLE);
+        createEventButton.setVisibility(isAdmin() ? View.VISIBLE : View.INVISIBLE);
         refreshHandler.post(refreshRunnable);
 
         // Instantiate Konotor.
@@ -342,7 +343,11 @@ public class MainActivity extends AppCompatActivity {
 
             // Separate received events into live and non-live
             for (BroadcastEvent event : events) {
-                new ListEventStreamsTask(event).executeOnExecutor(eventStatusCheckExecutor);
+                if(event.getEventName() != null && event.getEventName().toLowerCase().startsWith(PRIVATE_EVENT_PREFIX) && !isAdmin()) {
+                 Log.i(TAG, event.getEventName() + " is private!!; not showing event!");
+                } else {
+                    new ListEventStreamsTask(event).executeOnExecutor(eventStatusCheckExecutor);
+                }
             }
 
         }
@@ -477,7 +482,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private boolean isEventCreationAllowed() {
+    private boolean isAdmin() {
 
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
         boolean allowEventCreation = sharedPref.getBoolean(getString(R.string.pref_alloweventcreation_key), false);
