@@ -67,13 +67,13 @@ public class TaskQueueWorker {
    */
     private static final String APPLICATION_NAME = "";
     private static final String REMOTE_API_URL = "bioscope-b2074.appspot.com";
-    private static final long TASK_PROCESS_TIME_WINDOW_MS = 30000;
+    private static final long TASK_PROCESS_TIME_WINDOW_MS = 10000;
 
     // TODO : Avoid hardcoding creds. Move to resource file.
     private static final String CLIENT_ID = "622323392228-7jnk22dmh6capvcjmm1mhth7gcjrrdif.apps.googleusercontent.com";
     private static final String CLIENT_SECRET  = "VLFvCvnZzrmpCsbDD7F9gCI5";
 
-    private static final int NUM_WORKER_THREADS = 10;
+    private static final int NUM_WORKER_THREADS = 5;
 
     private static String projectName = "s~bioscope-b2074";
     private static String taskQueueName = "pull-queue";
@@ -266,13 +266,13 @@ public class TaskQueueWorker {
           System.out.println("Dropping old task..");
           return;
       }
-      System.out.println("Executing task..");
-      String payload = null;
-      EventStream eventStream = gson.fromJson(payload, EventStream.class);
-      File file = new File("/tmp/" + eventStream.streamId + UUID.randomUUID() + ".jpg");
 
+      File file = null;
       try {
-          payload = new String(Base64.decodeBase64(task.getPayloadBase64().getBytes()), "UTF-8");
+          System.out.println("Executing task..");
+          String payload = new String(Base64.decodeBase64(task.getPayloadBase64().getBytes()), "UTF-8");
+          EventStream eventStream = gson.fromJson(payload, EventStream.class);
+          file = new File("/tmp/" + eventStream.streamId + UUID.randomUUID() + ".jpg");
           String streamUrl = URLDecoder.decode(eventStream.encodedUrl, "UTF-8");
           System.out.println("Stream ID = " + eventStream.streamId);
           System.out.println("Stream URL = " + streamUrl);
@@ -281,8 +281,9 @@ public class TaskQueueWorker {
           }
           String[] ffmpeg = new String[] {"ffmpeg", "-i", streamUrl,
                   "-ss", "00:00:00",
-                  "-vf", "scale=iw/4:-1",
-                  "-qscale:v", "31",
+                  "-vf", "scale=iw/2:-1",
+                  "-qscale:v", "15",
+                  "-threads", "1",
                   "-vframes", "1",
                   file.getAbsolutePath()};
           Process p = Runtime.getRuntime().exec(ffmpeg);
@@ -309,7 +310,7 @@ public class TaskQueueWorker {
           System.out.println("Failed to process payload! Cause = " +  e.getClass());
           e.printStackTrace();
       } finally {
-          if (file.exists()) {
+          if (file != null && file.exists()) {
               file.delete();
           }
       }
