@@ -184,7 +184,15 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     }
 
     private void playStreamAsMainVideo(final BroadcastEventStream stream) {
-        Log.i(TAG, "Selected stream URL = " + stream.getEncodedUrl());
+
+        if (mainEventStream != null &&
+                stream.getStreamId().equals(mainEventStream.getStreamId())) {
+            // Already playing chosen stream. nothing to do..
+            Log.i(TAG, "Already playing selected stream URL = " + stream.getEncodedUrl());
+            return;
+        }
+
+        Log.i(TAG, "Starting playback for selected stream URL = " + stream.getEncodedUrl());
 
         mainEventStream = stream;
 
@@ -222,13 +230,20 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     protected void onResume() {
         Log.i(TAG, "onResume invoked!");
         super.onResume();
-        refreshHandler.post(refreshRunnable);
+
+        refreshListOfEventStreams();
+
+        // Refresh periodically only for live events
+        if (isLiveEvent) {
+            refreshHandler.postDelayed(refreshRunnable, REFRESH_INTERVAL_MS);
+        }
     }
 
     @Override
     protected void onPause() {
         Log.i(TAG, "onPause invoked!");
         super.onPause();
+
         refreshHandler.removeCallbacks(refreshRunnable);
 
         if (isFinishing()) {
@@ -308,7 +323,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
             try {
                 String response = serviceClient.listEventStreams(event.getEventId(), isLiveEvent).execute().getData();
-                Log.i(TAG, "Received ListEventStreams response = " + response);
+                Log.i(TAG, "Received ListEventStreams response..");
                 final List<BroadcastEventStream> eventStreams =  gson.fromJson(response,
                         new TypeToken<List<BroadcastEventStream>>() {
                         }.getType());
@@ -359,8 +374,15 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 }
             }
 
+            // Generate set of streamIds
+            // TODO : Override equals and hashcode for all objects to depend only on unique key
+            Set<String> streamIdsSet = new HashSet<>();
+            for (BroadcastEventStream stream : streamsSet) {
+                streamIdsSet.add(stream.getStreamId());
+            }
+
             // Update main video if the corresponding stream doesnt appear in refreshed list
-            if (!streamsSet.isEmpty() && !streamsSet.contains(mainEventStream)) {
+            if (!streamsSet.isEmpty() && !streamIdsSet.contains(mainEventStream.getStreamId())) {
                 playStreamAsMainVideo(eventStreamListAdapter.getItem(0));
             }
         }
@@ -457,8 +479,6 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 // Set stream info (name etc)
                 String streamName = eventStream.getStreamName();
                 viewHolder.streamInfo.setText(streamName == null ? "" : streamName);
-
-                Log.i(TAG, "thumbnail imageview = " + viewHolder.streamThumbnail);
 
                 // Show thumbnail
                 Bitmap thumbnailImage = streamThumbnailCache.get(eventStream.getStreamId());
