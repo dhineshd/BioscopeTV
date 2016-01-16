@@ -390,6 +390,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private class EventListAdapter extends ArrayAdapter<BroadcastEvent> {
+        //We store events as a set to ensure that we do not add duplicates when periodically refreshing.
         private Set<BroadcastEvent> events;
         public EventListAdapter(Context context, Set<BroadcastEvent> events) {
             super(context, 0);
@@ -401,6 +402,16 @@ public class MainActivity extends AppCompatActivity {
             if (!events.contains(object)) {
                 events.add(object);
                 super.add(object);
+            } else {
+                notifyDataSetChanged();
+            }
+        }
+
+        @Override
+        public void remove(BroadcastEvent object) {
+            if(events.contains(object)) {
+                events.remove(object);
+                super.remove(object);
             } else {
                 notifyDataSetChanged();
             }
