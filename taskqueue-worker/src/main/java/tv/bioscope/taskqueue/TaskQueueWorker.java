@@ -186,7 +186,7 @@ public class TaskQueueWorker {
         while (true) {
             // lease, execute and delete tasks
             Tasks tasks = getLeasedTasks(taskQueue);
-            if (tasks.getItems() == null || tasks.getItems().size() == 0) {
+            if (tasks == null || tasks.getItems() == null || tasks.getItems().size() == 0) {
                 System.out.println("No tasks to lease. Sleeping..");
                 Thread.sleep(1000);
                 continue;
@@ -246,7 +246,11 @@ public class TaskQueueWorker {
   private static Tasks getLeasedTasks(Taskqueue taskQueue) throws IOException {
     Taskqueue.Tasks.Lease leaseRequest =
         taskQueue.tasks().lease(projectName, taskQueueName, numTasks, leaseSecs);
-    return leaseRequest.execute();
+      try {
+          return leaseRequest.execute();
+      } catch (Exception e) {
+          return null;
+      }
   }
 
   /**
