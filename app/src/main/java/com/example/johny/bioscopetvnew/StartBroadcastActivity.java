@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.widget.Button;
 import android.widget.Toast;
 
 import com.bioscope.tv.backend.bioscopeBroadcastService.BioscopeBroadcastService;
@@ -18,8 +19,12 @@ import com.google.api.client.googleapis.services.GoogleClientRequestInitializer;
 import com.google.gson.Gson;
 
 import java.io.File;
+import java.io.FileFilter;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.Date;
 
 import io.kickflip.sdk.Kickflip;
 import io.kickflip.sdk.api.json.Stream;
@@ -33,7 +38,12 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     private static final String TAG = "StartBroadcastActivity";
     private static final String BROADCAST_FRAGMENT_TAG = "BroadcastFragment";
     private static final String STREAM_ID_KEY = "STREAM_ID";
+    private static final String SHOULD_START_BROADCAST_ON_ACTIVITY_START = "SHOULD_START_BROADCAST_ON_START";
     private static final long UPDATE_STREAM_STATUS_INTERVAL_MS = 5000;
+
+    // If there is no change in output directory for this timeout period, we
+    // will declare the broadcast as dead and restart.
+    private static final long STREAM_IDLE_TIMEOUT_MS = 20000;
 
     private long latestUserInteractionTimestampMs;
 
@@ -45,6 +55,10 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     private String streamName;
     private Handler streamStatusUpdateHandler;
     private Runnable streamStatusUpdateRunnable;
+    private String streamLocalOutputLocation;
+    private boolean deadStreamDetected;
+    private boolean shouldStartBroadcastOnActivityStart;
+    private boolean activityJustCreated = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +70,7 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
         Intent intent = getIntent();
         event = gson.fromJson(intent.getStringExtra(MainActivity.EVENT_KEY), BroadcastEvent.class);
         streamName = intent.getStringExtra(MainActivity.STREAM_NAME_KEY);
+        shouldStartBroadcastOnActivityStart = intent.getBooleanExtra(SHOULD_START_BROADCAST_ON_ACTIVITY_START, false);
 
         setTitle(streamName);
 
@@ -74,10 +89,77 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
         streamStatusUpdateRunnable = new Runnable() {
             @Override
             public void run() {
-                new UpdateEventStreamStatusTask().execute(streamId, String.valueOf(true));
-                streamStatusUpdateHandler.postDelayed(this, UPDATE_STREAM_STATUS_INTERVAL_MS);
+                Date lastModifiedTimeOfOutputDir = null;
+                if (streamLocalOutputLocation != null) {
+                    File file = new File(streamLocalOutputLocation);
+                    // Watch parent dir of output file
+                    if (file.getParentFile().isDirectory()) {
+
+                        File outputDir = file.getParentFile();
+
+                        lastModifiedTimeOfOutputDir = getLastModified(outputDir);
+
+                        Log.i(TAG, "Last modified time = " + getLastModified(outputDir));
+
+                        File [] subDirs = file.getParentFile().listFiles(new FileFilter() {
+
+                            @Override
+                            public boolean accept(File pathname) {
+                                return pathname.isDirectory();
+                            }
+                        });
+                        for (File dir : subDirs) {
+                            File[] filesInDir = dir.listFiles(new FileFilter() {
+                                @Override
+                                public boolean accept(File pathname) {
+                                    //Log.i(TAG, "file = " + pathname.getName());
+                                    return true;
+                                }
+                            });
+                            //Log.i(TAG, "For dir = " + dir + ", children count = " +  (filesInDir == null? 0 : filesInDir.length));
+                        }
+                    }
+                }
+
+                if (lastModifiedTimeOfOutputDir != null &&
+                        (System.currentTimeMillis() - lastModifiedTimeOfOutputDir.getTime() > STREAM_IDLE_TIMEOUT_MS)) {
+                    // We have not seen any new data written to output dir.
+                    // Stop and re-start the broadcast
+                    //stopBroadcast();
+                    //setupBroadcast(event);
+
+                    Log.i(TAG, "Stream is dead! We should restart broadcast..");
+
+                    deadStreamDetected = true;
+
+                    stopBroadcast();
+
+
+                    //try { Thread.sleep(1000); } catch (Exception e) { }
+
+                    //start recording
+                    //recordButton.performClick();
+
+                } else {
+                    // Notify server that stream is healthy and live
+                    new UpdateEventStreamStatusTask().execute(streamId, String.valueOf(true));
+                    streamStatusUpdateHandler.postDelayed(this, UPDATE_STREAM_STATUS_INTERVAL_MS);
+                }
             }
         };
+
+        activityJustCreated = true;
+    }
+
+    public static Date getLastModified(File directory) {
+        File[] files = directory.listFiles();
+        if (files.length == 0) return new Date(directory.lastModified());
+        Arrays.sort(files, new Comparator<File>() {
+            public int compare(File o1, File o2) {
+                return new Long(o2.lastModified()).compareTo(o1.lastModified()); //latest 1st
+            }
+        });
+        return new Date(files[0].lastModified());
     }
 
     @Override
@@ -146,14 +228,15 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     protected void onResume() {
         super.onResume();
         mFragment = (BroadcastFragment) getFragmentManager().findFragmentByTag(BROADCAST_FRAGMENT_TAG);
-    }
 
-    private void stopBroadcast() {
-        if (mFragment != null) {
-            mFragment.stopBroadcasting();
-            Log.i(TAG, "STOP_BROADCAST : Stopping broadcast..");
-        } else {
-            Log.i(TAG, "STOP_BROADCAST : Fragment is null");
+        if (activityJustCreated) {
+            activityJustCreated = false;
+
+            if (shouldStartBroadcastOnActivityStart) {
+                // Press the record button to start recording right away
+                Button recordButton = (Button) findViewById(io.kickflip.sdk.R.id.recordButton);
+                recordButton.performClick();
+            }
         }
     }
 
@@ -180,6 +263,7 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     @Override
     public void onBroadcastStart() {
         Log.i(TAG, "Broadcast started!");
+        deadStreamDetected = false;
     }
 
     @Override
@@ -199,6 +283,11 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
         streamStatusUpdateHandler.removeCallbacks(streamStatusUpdateRunnable);
         new UpdateEventStreamStatusTask().execute(streamId, String.valueOf(false));
         finish();
+        if (deadStreamDetected) {
+            Intent intent = getIntent();
+            intent.putExtra(SHOULD_START_BROADCAST_ON_ACTIVITY_START, true);
+            startActivity(intent);
+        }
     }
 
     @Override
@@ -207,8 +296,9 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
     }
 
     private void setupBroadcast(final BroadcastEvent event) {
-        String outputLocation = new File(getApplicationContext().getFilesDir(), "index.m3u8").getAbsolutePath();
-        Kickflip.setSessionConfig(new SessionConfig.Builder(outputLocation)
+        streamLocalOutputLocation = new File(getApplicationContext().getFilesDir(), "index.m3u8").getAbsolutePath();
+        Log.i(TAG, "Output location = " + streamLocalOutputLocation);
+        Kickflip.setSessionConfig(new SessionConfig.Builder(streamLocalOutputLocation)
                 .withVideoBitrate(300 * 1000)
                 .withPrivateVisibility(false)
                 .withLocation(false)
@@ -217,6 +307,15 @@ public class StartBroadcastActivity extends AppCompatActivity implements Broadca
                 .withAdaptiveStreaming(true)
                 .build());
         Kickflip.setBroadcastListener(this);
+    }
+
+    private void stopBroadcast() {
+        if (mFragment != null) {
+            mFragment.stopBroadcasting();
+            Log.i(TAG, "STOP_BROADCAST : Stopping broadcast..");
+        } else {
+            Log.i(TAG, "STOP_BROADCAST : Fragment is null");
+        }
     }
 
     private void initializeClient() {

@@ -93,9 +93,7 @@
                 android:visibility="invisible"
                 android:id="@+id/textview_event_viewers"/>
 
-
-
-
+            </RelativeLayout>
 
             <TextView
                 android:layout_width="wrap_content"
@@ -106,7 +104,6 @@
                 android:textSize="12sp"
                 android:text="Searching for streams..."
                 android:id="@+id/textview_stream_status"/>
-            </RelativeLayout>
 
             <TextView
                 android:layout_width="wrap_content"

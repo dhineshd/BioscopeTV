@@ -5,9 +5,11 @@ import android.content.Intent;
 import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.Drawable;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
@@ -71,7 +73,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private EventStreamListAdapter eventStreamListAdapter;
     private Set<BroadcastEventStream> streamsSet = new HashSet<>();
     private Set<AsyncTask> asyncTasks = new HashSet<>();
-    private LruCache<String, Bitmap> streamThumbnailCache;
+    private LruCache<BroadcastEventStream, Bitmap> streamThumbnailCache;
     private BroadcastEventStream mainEventStream;
     private BroadcastEvent event;
     private boolean isLiveEvent;
@@ -163,9 +165,9 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         // Use 1/8th of the available memory for this memory cache.
         final int cacheSize = maxMemory / 8;
 
-        streamThumbnailCache = new LruCache<String, Bitmap>(cacheSize) {
+        streamThumbnailCache = new LruCache<BroadcastEventStream, Bitmap>(cacheSize) {
             @Override
-            protected int sizeOf(String key, Bitmap bitmap) {
+            protected int sizeOf(BroadcastEventStream key, Bitmap bitmap) {
                 // The cache size will be measured in kilobytes rather than
                 // number of items.
                 return bitmap.getByteCount() / 1024;
@@ -429,16 +431,19 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
         @Override
         public void add(BroadcastEventStream object) {
+
+            // Decode and store thumbnail for stream
+            EncodedThumbnail encodedThumbnail = object.getEncodedThumbnail();
+            if (encodedThumbnail != null && encodedThumbnail.getValue() != null) {
+                Bitmap thumbnailImage = decodeBase64(object.getEncodedThumbnail().getValue());
+                streamThumbnailCache.put(object, thumbnailImage);
+            }
+
             if (!streamsSet.contains(object)) {
                 if (streamsSet.isEmpty()) {
                     ProgressBar progressBar = (ProgressBar) findViewById(R.id.progressbar_loading_streams);
                     progressBar.setVisibility(View.GONE);
                     playStreamAsMainVideo(object);
-                }
-                EncodedThumbnail encodedThumbnail = object.getEncodedThumbnail();
-                if (encodedThumbnail != null && encodedThumbnail.getValue() != null) {
-                    Bitmap thumbnailImage = decodeBase64(object.getEncodedThumbnail().getValue());
-                    streamThumbnailCache.put(object.getStreamId(), thumbnailImage);
                 }
                 streamsSet.add(object);
                 super.add(object);
@@ -473,16 +478,17 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 viewHolder.streamInfo.setText(streamName == null ? "" : streamName);
 
                 // Show thumbnail
-                Bitmap thumbnailImage = streamThumbnailCache.get(eventStream.getStreamId());
-                viewHolder.streamThumbnail.setImageBitmap(thumbnailImage);
+                Bitmap thumbnailImage = streamThumbnailCache.get(eventStream);
+                if (thumbnailImage != null) {
+                    viewHolder.streamThumbnail.setImageBitmap(thumbnailImage);
+                } else {
+                    viewHolder.streamThumbnail.setImageDrawable(
+                            getDrawableForAPILevel(R.drawable.bioscope_launch_icon_full_tail));
+                }
 
                 // Show rectangle around currently playing stream
                 if (eventStream.equals(mainEventStream)) {
-                    if(android.os.Build.VERSION.SDK_INT >= 21){
-                        viewHolder.itemLayout.setBackground(getDrawable(R.drawable.rectangle));
-                    } else {
-                        viewHolder.itemLayout.setBackground(getResources().getDrawable(R.drawable.rectangle));
-                    }
+                    viewHolder.itemLayout.setBackground(getDrawableForAPILevel(R.drawable.rectangle));
                 } else {
                     viewHolder.itemLayout.setBackground(null);
                 }
@@ -501,6 +507,14 @@ public class ListEventStreamsActivity extends AppCompatActivity {
             viewHolder.streamThumbnail = (ImageView) view.findViewById(R.id.list_item_event_stream_imageview);
             return viewHolder;
         }
+    }
+
+    private Drawable getDrawableForAPILevel(int id) {
+        // Use new method for API 21+
+        if (Build.VERSION.SDK_INT >= 21) {
+            return getDrawable(id);
+        }
+        return getResources().getDrawable(id);
     }
 
     // Not using getter/setter or Lombok for optimization
