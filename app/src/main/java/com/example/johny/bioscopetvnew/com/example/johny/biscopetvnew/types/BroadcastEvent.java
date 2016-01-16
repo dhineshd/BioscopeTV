@@ -11,5 +11,20 @@ public class BroadcastEvent {
     private String eventName;
     private String creator;
     private long creationTimeMs;
-    private long lastUpdatedTimeMs;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        BroadcastEvent that = (BroadcastEvent) o;
+
+        return !(eventId != null ? !eventId.equals(that.eventId) : that.eventId != null);
+
+    }
+
+    @Override
+    public int hashCode() {
+        return eventId != null ? eventId.hashCode() : 0;
+    }
 }

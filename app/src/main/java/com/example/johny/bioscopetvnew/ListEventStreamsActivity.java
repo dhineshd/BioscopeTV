@@ -185,8 +185,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
     private void playStreamAsMainVideo(final BroadcastEventStream stream) {
 
-        if (mainEventStream != null &&
-                stream.getStreamId().equals(mainEventStream.getStreamId())) {
+        if (stream.equals(mainEventStream)) {
             // Already playing chosen stream. nothing to do..
             Log.i(TAG, "Already playing selected stream URL = " + stream.getEncodedUrl());
             return;
@@ -374,15 +373,8 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 }
             }
 
-            // Generate set of streamIds
-            // TODO : Override equals and hashcode for all objects to depend only on unique key
-            Set<String> streamIdsSet = new HashSet<>();
-            for (BroadcastEventStream stream : streamsSet) {
-                streamIdsSet.add(stream.getStreamId());
-            }
-
             // Update main video if the corresponding stream doesnt appear in refreshed list
-            if (!streamsSet.isEmpty() && !streamIdsSet.contains(mainEventStream.getStreamId())) {
+            if (eventStreamListAdapter.getCount() > 0 && !streamsSet.contains(mainEventStream)) {
                 playStreamAsMainVideo(eventStreamListAdapter.getItem(0));
             }
         }
@@ -485,7 +477,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 viewHolder.streamThumbnail.setImageBitmap(thumbnailImage);
 
                 // Show rectangle around currently playing stream
-                if (eventStream.getStreamId().equals(mainEventStream.getStreamId())) {
+                if (eventStream.equals(mainEventStream)) {
                     if(android.os.Build.VERSION.SDK_INT >= 21){
                         viewHolder.itemLayout.setBackground(getDrawable(R.drawable.rectangle));
                     } else {
