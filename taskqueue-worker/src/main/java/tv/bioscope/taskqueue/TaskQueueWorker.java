@@ -261,7 +261,7 @@ public class TaskQueueWorker {
    */
   private static void executeTask(Task task) {
       // If task is too old, drop it
-      if (System.currentTimeMillis() - task.getEnqueueTimestamp()
+      if (System.currentTimeMillis() - (task.getEnqueueTimestamp() * 1000)
               >= TASK_PROCESS_TIME_WINDOW_MS) {
           System.out.println("Dropping old task..");
           return;
