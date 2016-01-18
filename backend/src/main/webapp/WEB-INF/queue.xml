@@ -2,6 +2,9 @@
     <queue>
         <name>pull-queue</name>
         <mode>pull</mode>
+        <retry-parameters>
+            <task-retry-limit>1</task-retry-limit>
+        </retry-parameters>
         <acl>
             <user-email>bioscope@bioscope-b2074.iam.gserviceaccount.com</user-email>      <!-- can list, get, lease, delete, and update tasks -->
             <user-email>appchameleon@gmail.com</user-email>
