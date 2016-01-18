@@ -13,6 +13,11 @@ android {
 
     }
     buildTypes {
+        debug {
+            debuggable true
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
@@ -38,4 +43,11 @@ dependencies {
     //Konotor
     compile 'com.android.support:support-v4:21.+'
     compile 'com.konotor:KonotorActivity:3.+'
+}
+
+android.applicationVariants.all { variant ->
+    // Distinguish debug and release versions with suffix
+    if (variant.buildType.name == 'debug') {
+        variant.mergedFlavor.versionName = android.defaultConfig.versionName + "-debug";
+    }
 }
