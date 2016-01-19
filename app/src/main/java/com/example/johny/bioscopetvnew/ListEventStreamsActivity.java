@@ -25,7 +25,6 @@ import android.widget.ArrayAdapter;
 import android.widget.FrameLayout;
 import android.widget.GridView;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.VideoView;
@@ -188,6 +187,11 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         }
     }
 
+    private Uri decodeURL(final String encodedUrl) throws UnsupportedEncodingException {
+        // Note : Uri.parse(encodedUrl) doesnt not work on all devices. Hence, use of URLDecoder.
+        return Uri.parse(URLDecoder.decode(encodedUrl, "UTF-8"));
+    }
+
     private void playStreamAsMainVideo(final BroadcastEventStream stream) {
 
         if (stream.equals(mainEventStream)) {
@@ -201,14 +205,15 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         mainEventStream = stream;
 
         // Refresh to ensure stream we play in main video shows up as the selected
-        // // (rectangle) in the list of streams
+        // (rectangle) in the list of streams
         eventStreamListAdapter.notifyDataSetChanged();
 
         try {
             if (videoView.isPlaying()) {
                 videoView.stopPlayback();
             }
-            videoView.setVideoURI(Uri.parse(URLDecoder.decode(stream.getEncodedUrl(), "UTF-8")));
+            Uri uri = decodeURL(stream.getEncodedUrl());
+            videoView.setVideoURI(uri);
             videoView.setOnInfoListener(new MediaPlayer.OnInfoListener() {
                 @Override
                 public boolean onInfo(MediaPlayer mp, int what, int extra) {
@@ -217,13 +222,12 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                         Log.i(TAG, "Buffering just started!");
                     } else if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
                         Log.i(TAG, "Received first video frame!");
-                        mainVideoBufferingStreamTextView.setVisibility(View.GONE);
+                        mainVideoBufferingStreamTextView.setVisibility(View.INVISIBLE);
                     }
                     //viewHolder.progressBar.setVisibility(mp.isPlaying()? View.INVISIBLE : View.VISIBLE);
                     return true;
                 }
             });
-
 
             videoView.start();
         } catch (Exception e) {
@@ -443,6 +447,9 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     }
 
     private class EventStreamListAdapter extends ArrayAdapter<BroadcastEventStream> {
+        private VideoView playingStreamVideoView;
+        private ViewHolder playingStreamVideoViewHolder;
+
         public EventStreamListAdapter(Context context) {
             super(context, 0);
         }
@@ -476,7 +483,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         }
 
         @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
+        public View getView(final int position, View convertView, ViewGroup parent) {
             try {
                 // Get the data item for this position
                 final BroadcastEventStream eventStream = getItem(position);
@@ -496,18 +503,72 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 viewHolder.streamInfo.setText(streamName == null ? "" : streamName);
 
                 // Show thumbnail
-                Bitmap thumbnailImage = streamThumbnailCache.get(eventStream);
-                if (thumbnailImage != null) {
-                    viewHolder.streamThumbnail.setImageBitmap(thumbnailImage);
-                } else {
-                    viewHolder.streamThumbnail.setImageDrawable(
-                            getDrawableForAPILevel(R.drawable.bioscope_launch_icon_full_tail));
-                }
+//                Bitmap thumbnailImage = streamThumbnailCache.get(eventStream);
+//                if (thumbnailImage != null) {
+//                    viewHolder.streamThumbnail.setImageBitmap(thumbnailImage);
+//                } else {
+//                    viewHolder.streamThumbnail.setImageDrawable(
+//                            getDrawableForAPILevel(R.drawable.bioscope_launch_icon_full_tail));
+//                }
+
 
                 // Show rectangle around currently playing stream
                 if (eventStream.equals(mainEventStream)) {
+                    viewHolder.progressBar.setVisibility(View.INVISIBLE);
+                    viewHolder.videoViewPath = "";
+                    if (viewHolder.streamVideo.isPlaying()) {
+                        Log.i(TAG, "Stopping playback since it is playing as main video");
+                        viewHolder.streamVideo.stopPlayback();
+                    }
                     viewHolder.itemLayout.setBackground(getDrawableForAPILevel(R.drawable.rectangle));
                 } else {
+
+                    // Play stream video (change the video only if requested stream is
+                    // different from currently playing stream for this list element)
+
+                    if (!viewHolder.videoViewPath.equals(eventStream.getEncodedUrl()) &&
+                            !viewHolder.videoViewPath.equals(eventStream.getEncodedAlternateUrl())) {
+
+                        if (viewHolder.streamVideo.isPlaying()) {
+                            Log.i(TAG, "Stopping playback for position = " + position);
+                            viewHolder.streamVideo.stopPlayback();
+                        }
+                        Uri uri = decodeURL(eventStream.getEncodedUrl());
+                        Log.i(TAG, "Setting video path for position = " + position + " url = " + uri.toString());
+
+                        if (eventStream.getEncodedAlternateUrl() != null) {
+                            viewHolder.videoViewPath = eventStream.getEncodedAlternateUrl();
+                        } else {
+                            viewHolder.videoViewPath = eventStream.getEncodedUrl();
+                        }
+                        viewHolder.streamVideo.setVideoURI(uri);
+                        viewHolder.streamVideo.setOnInfoListener(new MediaPlayer.OnInfoListener() {
+                            @Override
+                            public boolean onInfo(MediaPlayer mp, int what, int extra) {
+                                Log.i(TAG, "onInfo for position = " + position + " what = " + what);
+                                if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) {
+                                    viewHolder.progressBar.setVisibility(View.VISIBLE);
+                                } else if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
+                                    viewHolder.progressBar.setVisibility(View.INVISIBLE);
+                                }
+                                return true;
+                            }
+                        });
+                        viewHolder.streamVideo.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                            @Override
+                            public void onPrepared(MediaPlayer mp) {
+                                Log.i(TAG, "Prepared mp for position = " + position);
+                                // No audio for list videos playback
+                                mp.setVolume(0f, 0f);
+
+                                // For non-live events, we want to keep playing stream in a loop
+                                if (!isLiveEvent) {
+                                    mp.setLooping(true);
+                                }
+                            }
+                        });
+                        viewHolder.streamVideo.start();
+                    }
                     viewHolder.itemLayout.setBackground(null);
                 }
 
@@ -522,7 +583,10 @@ public class ListEventStreamsActivity extends AppCompatActivity {
             ViewHolder viewHolder = new ViewHolder();
             viewHolder.itemLayout = (FrameLayout) view.findViewById(R.id.list_item_event_stream_framelayout);
             viewHolder.streamInfo = (TextView) view.findViewById(R.id.list_item_event_stream_textview);
-            viewHolder.streamThumbnail = (ImageView) view.findViewById(R.id.list_item_event_stream_imageview);
+            //viewHolder.streamThumbnail = (ImageView) view.findViewById(R.id.list_item_event_stream_imageview);
+            viewHolder.streamVideo = (VideoView) view.findViewById(R.id.list_item_event_stream_videoview);
+            viewHolder.progressBar = (ProgressBar) view.findViewById(R.id.list_item_event_stream_progressbar);
+            viewHolder.videoViewPath = "";
             return viewHolder;
         }
     }
@@ -540,7 +604,41 @@ public class ListEventStreamsActivity extends AppCompatActivity {
     private static class ViewHolder {
         FrameLayout itemLayout;
         TextView streamInfo;
-        ImageView streamThumbnail;
+        //ImageView streamThumbnail;
+        VideoView streamVideo;
+        String videoViewPath;
+        ProgressBar progressBar;
+    }
+
+    private void switchView() {
+        // TODO Fix this logic to work with scrolling when views are re-used.
+//                    ViewGroup mainVideoViewParent = (ViewGroup) findViewById(R.id.layout_main_video);
+//                    VideoView itemVideoView = viewHolder.streamVideo;
+//                    // Set item videoview as main videoview if not already done
+//                    if (!itemVideoView.getParent().equals(mainVideoViewParent)) {
+//
+//                        ViewGroup itemVideoViewParent = (ViewGroup) itemVideoView.getParent();
+//                        ViewGroup.LayoutParams itemLayoutParams = itemVideoView.getLayoutParams();
+//                        itemVideoViewParent.removeView(itemVideoView);
+//
+//                        Log.i(TAG, "Main video parent child count = " + mainVideoViewParent.getChildCount());
+//                        Log.i(TAG, "Item video parent child count = " + itemVideoViewParent.getChildCount());
+//
+//                        if (playingStreamVideoView != null && playingStreamVideoViewHolder != null) {
+//                            // Add the currently playing videoview back to list
+//                            mainVideoViewParent.removeView(playingStreamVideoView);
+//                            playingStreamVideoViewHolder.streamVideo = playingStreamVideoView;
+//                        }
+//                        RelativeLayout.LayoutParams mainVideoLayoutParams = new RelativeLayout.LayoutParams(
+//                                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+//                        mainVideoLayoutParams.alignWithParent = true;
+//                        mainVideoViewParent.addView(itemVideoView, mainVideoLayoutParams);
+//                        playingStreamVideoView = itemVideoView;
+//                        playingStreamVideoViewHolder = viewHolder;
+//                        Log.i(TAG, "Changed main videoview to play stream in position = " + position);
+//                    } else {
+//                        Log.i(TAG, "Already set selected video as main video position = " + position);
+//                    }
     }
 
 }

@@ -165,7 +165,10 @@ public class MyEndpoint {
 
             datastore.put(eventStream);
 
+            // TODO : Remove this in future once all clients have migrated to app versions 12+ (no thumbnail)
             createGenerateThumbnailTask(streamId, encodedUrl);
+
+            createGenerateAlternateUrlTask(streamId, encodedUrl, true);
         }
 
         response.setData(streamId);
@@ -175,8 +178,13 @@ public class MyEndpoint {
     private class EventStream {
         String streamId;
         String encodedUrl;
+        boolean isLive;
 
     }
+
+
+    private static final String CREATE_THUMBNAIL_TASK_QUEUE_NAME = "pull-queue";
+    private static final String CREATE_STREAM_TASK_QUEUE_NAME = "create-stream-task-queue";
 
     private void createGenerateThumbnailTask(final String streamId, final String encodedUrl) {
 
@@ -185,7 +193,20 @@ public class MyEndpoint {
         EventStream stream = new EventStream();
         stream.encodedUrl = encodedUrl;
         stream.streamId = streamId;
-        Queue q = QueueFactory.getQueue("pull-queue");
+        Queue q = QueueFactory.getQueue(CREATE_THUMBNAIL_TASK_QUEUE_NAME);
+        q.add(TaskOptions.Builder.withMethod(TaskOptions.Method.PULL)
+                .payload(gson.toJson(stream)));
+    }
+
+    private void createGenerateAlternateUrlTask(final String streamId, final String encodedUrl, final boolean isLive) {
+
+        // Create an asynchronous task (to be processed in GCE) to generate thumbnails for stream
+        // and write them to data store
+        EventStream stream = new EventStream();
+        stream.encodedUrl = encodedUrl;
+        stream.streamId = streamId;
+        stream.isLive = isLive;
+        Queue q = QueueFactory.getQueue(CREATE_STREAM_TASK_QUEUE_NAME);
         q.add(TaskOptions.Builder.withMethod(TaskOptions.Method.PULL)
                 .payload(gson.toJson(stream)));
     }
@@ -208,7 +229,10 @@ public class MyEndpoint {
             stream.setProperty("lastUpdatedTimeMs", System.currentTimeMillis());
             datastore.put(stream);
 
+            // TODO : Remove this in future once all clients have migrated to app versions 12+ (no thumbnail)
             createGenerateThumbnailTask(streamId, (String) stream.getProperty("encodedUrl"));
+
+            createGenerateAlternateUrlTask(streamId, (String) stream.getProperty("encodedUrl"), isLive);
 
         } catch (EntityNotFoundException e) {
             // ignore (to be handled as part of input validation)

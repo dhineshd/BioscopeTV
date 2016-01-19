@@ -1,16 +1,21 @@
 package com.example.johny.bioscopetvnew.com.example.johny.biscopetvnew.types;
 
 import lombok.Data;
+import lombok.NonNull;
 
 /**
  * Created by dhinesh.dharman on 12/27/15.
  */
 @Data
 public class BroadcastEventStream {
+    @NonNull
     private String streamId;
+    @NonNull
     private String eventId;
     private String streamName;
+    @NonNull
     private String encodedUrl;
+    private String encodedAlternateUrl;
     private String creator;
     private long creationTimeMs;
     private EncodedThumbnail encodedThumbnail;

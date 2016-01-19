@@ -47,8 +47,15 @@ import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -73,14 +80,27 @@ public class TaskQueueWorker {
     private static final String CLIENT_ID = "622323392228-7jnk22dmh6capvcjmm1mhth7gcjrrdif.apps.googleusercontent.com";
     private static final String CLIENT_SECRET  = "VLFvCvnZzrmpCsbDD7F9gCI5";
 
-    private static final int NUM_WORKER_THREADS = 5;
+    private static final int NUM_WORKER_THREADS = 1;
 
     private static String projectName = "s~bioscope-b2074";
-    private static String taskQueueName = "pull-queue";
+    private static String taskQueueName = "create-stream-task-queue";
     private static int leaseSecs = 60;
     private static int numTasks = NUM_WORKER_THREADS;
+    private static int FFSERVER_PORT = 8090;
+    private static String INSTANCE_IP = "130.211.112.165";
 
     private static Executor executor = Executors.newFixedThreadPool(NUM_WORKER_THREADS);
+
+    private static Set<Integer> availableFeedIds = new HashSet<>();
+    private static Map<String, FeedInfo> streamIdToFeedInfoMap = new HashMap<>();
+
+    static {
+        availableFeedIds.add(1);
+        availableFeedIds.add(2);
+        availableFeedIds.add(3);
+        availableFeedIds.add(4);
+        availableFeedIds.add(5);
+    }
 
     /** Directory to store user credentials. */
     private static final java.io.File DATA_STORE_DIR =
@@ -196,11 +216,11 @@ public class TaskQueueWorker {
                 executor.execute(new Runnable() {
                     @Override
                     public void run() {
-                        executeTask(leasedTask);
                         try {
+                            executeTask(leasedTask);
                             deleteTask(taskQueue, leasedTask);
-                        } catch (IOException e) {
-                            System.out.println("Failed to delete task.. ");
+                        } catch (Exception e) {
+                            System.out.println("Failed to execute / delete task.. ");
                         }
                     }
                 });
@@ -253,72 +273,169 @@ public class TaskQueueWorker {
       }
   }
 
-  /**
-   * This method actually performs the desired work on tasks. It can make use of payload of the
-   * task. By default, we are just printing the payload of the leased task.
-   *
-   * @param task The task that should be executed.
-   */
-  private static void executeTask(Task task) {
-      // If task is too old, drop it
-      if (System.currentTimeMillis() - (task.getEnqueueTimestamp() * 1000)
+    /**
+    * This method actually performs the desired work on tasks. It can make use of payload of the
+    * task. By default, we are just printing the payload of the leased task.
+    *
+    * @param task The task that should be executed.
+    */
+    private static void executeTask(Task task) throws UnsupportedEncodingException {
+        // If task is too old, drop it
+        if (System.currentTimeMillis() - (task.getEnqueueTimestamp() * 1000)
               >= TASK_PROCESS_TIME_WINDOW_MS) {
           System.out.println("Dropping old task..");
           return;
-      }
+        }
 
-      File file = null;
-      try {
-          System.out.println("Executing task..");
-          String payload = new String(Base64.decodeBase64(task.getPayloadBase64().getBytes()), "UTF-8");
-          EventStream eventStream = gson.fromJson(payload, EventStream.class);
-          file = new File("/tmp/" + eventStream.streamId + UUID.randomUUID() + ".jpg");
-          String streamUrl = URLDecoder.decode(eventStream.encodedUrl, "UTF-8");
-          System.out.println("Stream ID = " + eventStream.streamId);
-          System.out.println("Stream URL = " + streamUrl);
-          if (file.exists()) {
-              file.delete();
-          }
-          String[] ffmpeg = new String[] {"ffmpeg", "-i", streamUrl,
-                  "-ss", "00:00:00",
-                  "-vf", "scale=iw/2:-1",
-                  "-qscale:v", "15",
-                  "-threads", "1",
-                  "-vframes", "1",
-                  file.getAbsolutePath()};
-          Process p = Runtime.getRuntime().exec(ffmpeg);
-          p.waitFor();
-          if (p.exitValue() == 0 && file.exists()) {
-              System.out.println("Thumbnail generation succesful!");
-              String encodedImage =  new String(Base64.encodeBase64(FileUtils.readFileToByteArray(file)), "UTF-8");
-              System.out.println("Encoded image size = " + encodedImage.length());
+        String taskPayload = new String(Base64.decodeBase64(task.getPayloadBase64().getBytes()), "UTF-8");
 
-              Key streamKey = KeyFactory.createKey("EventStream", eventStream.streamId);
-              try {
-                  Entity stream = dataStore.get(streamKey);
-                  stream.setProperty("encodedThumbnail", new Text(encodedImage));
-                  stream.setProperty("lastThumbnailUpdatedTimeMs", System.currentTimeMillis());
-                  dataStore.put(stream);
-                  System.out.println("Successfully updated thumbnail for stream");
-              } catch (EntityNotFoundException e) {
-                  // ignore (to be handled as part of input validation)
-              }
+        EventStream eventStream = gson.fromJson(taskPayload, EventStream.class);
 
-          }
+        //generateThumbnailAndWriteToDatastore(eventStream);
 
-      } catch (Exception e) {
-          System.out.println("Failed to process payload! Cause = " +  e.getClass());
-          e.printStackTrace();
-      } finally {
-          if (file != null && file.exists()) {
-              file.delete();
-          }
-      }
-  }
+        if (eventStream.isLive) {
+            createAlternateStreamAndWriteUrlToDatastore(eventStream);
+        } else {
+            destroyAlternateStream(eventStream);
+        }
+    }
+
+    private static void createAlternateStreamAndWriteUrlToDatastore(final EventStream eventStream) {
+        if (availableFeedIds.isEmpty()) {
+            System.out.println("No available feeds to show stream!");
+            return;
+        }
+        if (streamIdToFeedInfoMap.containsKey(eventStream.streamId)) {
+            System.out.println("Already created alternate stream. Ignoring..");
+            return;
+        }
+        try {
+            System.out.println("Executing create alternate stream task..");
+            int feedId = availableFeedIds.iterator().next();
+            availableFeedIds.remove(feedId);
+
+            String[] ffmpeg = new String[] {"ffmpeg", "-re",
+                    "-i", decodeURL(eventStream.encodedUrl),
+                    "http://127.0.0.1:" + FFSERVER_PORT + "/" + "feed" + feedId + ".ffm"};
+
+            // TODO : Create background process
+            Process p = Runtime.getRuntime().exec(ffmpeg);
+            if (p.isAlive()) {
+                System.out.println("ffmpeg process alive. ");
+            } else {
+                System.out.println("ffmpeg process died. exitValue = " + p.exitValue() + "args = " + Arrays.toString(ffmpeg));
+            }
+
+            FeedInfo feedInfo = new FeedInfo();
+            feedInfo.feedId = feedId;
+            feedInfo.streamingProcess = p;
+            streamIdToFeedInfoMap.put(eventStream.streamId, feedInfo);
+
+            String alternateStreamUrl = "http://" + INSTANCE_IP + ":" + FFSERVER_PORT + "/" + "test" + feedId + ".mpg";
+
+            Key streamKey = KeyFactory.createKey("EventStream", eventStream.streamId);
+            try {
+                Entity stream = dataStore.get(streamKey);
+                stream.setProperty("encodedAlternateUrl", encodeURL(alternateStreamUrl));
+                stream.setProperty("lastAlternateUrlUpdatedTimeMs", System.currentTimeMillis());
+                dataStore.put(stream);
+                System.out.println("Successfully updated alternate URL for stream");
+            } catch (EntityNotFoundException e) {
+                // ignore (to be handled as part of input validation)
+            }
+
+        } catch (Exception e) {
+            System.out.println("Failed to create stream! Cause = " +  e.getClass());
+            e.printStackTrace();
+        }
+    }
+
+    // TODO Figure out how to detect live more reliably
+    private static void destroyAlternateStream(final EventStream eventStream) {
+        if (!streamIdToFeedInfoMap.containsKey(eventStream.streamId)) {
+            System.out.println("Process details unknown for stream destroy. Ignoring..");
+            return;
+        }
+        try {
+            System.out.println("Executing destroy alternate stream task..");
+            FeedInfo feedInfo = streamIdToFeedInfoMap.get(eventStream.streamId);
+            Process p = feedInfo.streamingProcess.destroyForcibly();
+            p.waitFor();
+            streamIdToFeedInfoMap.remove(eventStream.streamId);
+            availableFeedIds.add(feedInfo.feedId);
+        } catch (Exception e) {
+            System.out.println("Failed to destroy stream! Cause = " +  e.getClass());
+            e.printStackTrace();
+        }
+    }
+
+    private static String decodeURL(final String encodedUrl) throws UnsupportedEncodingException {
+        // Note : Uri.parse(encodedUrl) doesnt not work on all devices. Hence, use of URLDecoder.
+        return URLDecoder.decode(encodedUrl, "UTF-8");
+    }
+
+    private static String encodeURL(final String url) throws UnsupportedEncodingException {
+        // Note : Uri.parse(encodedUrl) doesnt not work on all devices. Hence, use of URLDecoder.
+        return URLEncoder.encode(url, "UTF-8");
+    }
+
+    private static void generateThumbnailAndWriteToDatastore(final EventStream eventStream) {
+        File file = null;
+        try {
+            System.out.println("Executing create thumbnail task..");
+            file = new File("/tmp/" + eventStream.streamId + UUID.randomUUID() + ".jpg");
+            String streamUrl = URLDecoder.decode(eventStream.encodedUrl, "UTF-8");
+            System.out.println("Stream ID = " + eventStream.streamId);
+            System.out.println("Stream URL = " + streamUrl);
+            if (file.exists()) {
+                file.delete();
+            }
+            String[] ffmpeg = new String[] {"ffmpeg", "-i", streamUrl,
+                    "-ss", "00:00:00",
+                    "-vf", "scale=iw/2:-1",
+                    "-qscale:v", "15",
+                    "-threads", "1",
+                    "-vframes", "1",
+                    file.getAbsolutePath()};
+            Process p = Runtime.getRuntime().exec(ffmpeg);
+            p.waitFor();
+            if (p.exitValue() == 0 && file.exists()) {
+                System.out.println("Thumbnail generation succesful!");
+                String encodedImage =  new String(Base64.encodeBase64(FileUtils.readFileToByteArray(file)), "UTF-8");
+                System.out.println("Encoded image size = " + encodedImage.length());
+
+                Key streamKey = KeyFactory.createKey("EventStream", eventStream.streamId);
+                try {
+                    Entity stream = dataStore.get(streamKey);
+                    stream.setProperty("encodedThumbnail", new Text(encodedImage));
+                    stream.setProperty("lastThumbnailUpdatedTimeMs", System.currentTimeMillis());
+                    dataStore.put(stream);
+                    System.out.println("Successfully updated thumbnail for stream");
+                } catch (EntityNotFoundException e) {
+                    // ignore (to be handled as part of input validation)
+                }
+
+            }
+
+        } catch (Exception e) {
+            System.out.println("Failed to generate thumbnail! Cause = " +  e.getClass());
+            e.printStackTrace();
+        } finally {
+            if (file != null && file.exists()) {
+                file.delete();
+            }
+        }
+    }
 
     private class EventStream {
         String streamId;
         String encodedUrl;
+        boolean isLive;
+    }
+
+    static class FeedInfo {
+        int feedId;
+        Process streamingProcess;
     }
 
   /**

@@ -60,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String ROOT_URL = "https://bioscope-b2074.appspot.com/_ah/api";
     // Use this URL for testing against non-prod versions of backend (only 1 non-prod version will be available)
     // So, URL for version 2 of https://abc.appspot.com is https://v2-dot-abc.appspot.com
-    //public static final String ROOT_URL = "https://v2-dot-bioscope-b2074.appspot.com/_ah/api";
+    //public static final String ROOT_URL = "https://v6-dot-bioscope-b2074.appspot.com/_ah/api";
     public static final String EVENT_KEY = "EVENT";
     public static final String STREAM_NAME_KEY = "STREAM_NAME";
     public static final String IS_LIVE_KEY = "IS_LIVE";
