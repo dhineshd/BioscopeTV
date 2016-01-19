@@ -81,6 +81,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
 
     private TextView mainVideoBufferingStreamTextView;
     private ImageButton tweetButton;
+    private TextView videoViewStatus;
 
     private BioscopeBroadcastService serviceClient;
     @Override
@@ -113,6 +114,8 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         textViewStreamSearchStatus = (TextView) findViewById(R.id.textview_stream_status);
 
         tweetButton = (ImageButton) findViewById(R.id.tweetButton);
+
+        videoViewStatus = (TextView) findViewById(R.id.videoview_status);
 
         tweetButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -220,6 +223,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                     return true;
                 }
             });
+
 
             videoView.start();
         } catch (Exception e) {
@@ -355,6 +359,20 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                 textViewEventStatus.setVisibility(isLiveEvent? View.VISIBLE : View.INVISIBLE);
                 textViewEventViewers.setVisibility(isLiveEvent? View.VISIBLE : View.INVISIBLE);
                 tweetButton.setVisibility(isLiveEvent? View.VISIBLE : View.INVISIBLE);
+                videoView.setVisibility(View.VISIBLE);
+                videoViewStatus.setVisibility(View.INVISIBLE);
+            }
+
+            if(eventStreams == null || eventStreams.isEmpty()) {
+
+                if(isLiveEvent) {
+                    //This is a live event and there are no live streams
+                    if(!videoView.isPlaying()) {
+                        videoView.setVisibility(View.INVISIBLE);
+                        videoViewStatus.setVisibility(View.VISIBLE);
+                    }
+
+                }
             }
 
             // Remove expired streams from view
