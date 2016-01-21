@@ -154,7 +154,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         refreshRunnable = new Runnable() {
             @Override
             public void run() {
-                refreshListOfEventStreams();
+                performRefreshTasks();
                 refreshHandler.postDelayed(this, REFRESH_INTERVAL_MS);
             }
         };
@@ -240,7 +240,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         Log.i(TAG, "onResume invoked!");
         super.onResume();
 
-        refreshListOfEventStreams();
+        performRefreshTasks();
 
         // Refresh periodically only for live events
         if (isLiveEvent) {
@@ -294,7 +294,7 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         }
     }
 
-    private void refreshListOfEventStreams() {
+    private void performRefreshTasks() {
         // Cancel any running tasks
         for (AsyncTask task : asyncTasks) {
             if (task != null) {
@@ -303,8 +303,12 @@ public class ListEventStreamsActivity extends AppCompatActivity {
         }
 
         asyncTasks.add(new ListEventStreamsTask().execute());
-        asyncTasks.add(new UpdateEventStatsTask().execute(event.getEventId(), userId));
-        asyncTasks.add(new GetEventStatsTask().execute(event.getEventId()));
+
+        // Update and get event stats only for live events
+        if (isLiveEvent) {
+            asyncTasks.add(new UpdateEventStatsTask().execute(event.getEventId(), userId));
+            asyncTasks.add(new GetEventStatsTask().execute(event.getEventId()));
+        }
     }
 
     private void initializeClient() {
