@@ -123,9 +123,7 @@ public class TaskQueueWorker {
 
     private static DatastoreService dataStore;
 
-
     private static void initializeDatastore() {
-
         System.out.println("Initializing datastore");
         RemoteApiOptions options = new RemoteApiOptions()
                 .server(REMOTE_API_URL, 443).useApplicationDefaultCredential();
@@ -281,7 +279,11 @@ public class TaskQueueWorker {
     */
     private static void executeTask(Task task) throws UnsupportedEncodingException {
         // If task is too old, drop it
-        if (System.currentTimeMillis() - (task.getEnqueueTimestamp() * 1000)
+        System.out.println("Current time (ms) = " + System.currentTimeMillis());
+        // Note : Task enqueue time is in microseconds in this implementation and
+        // not seconds since epoch as the javadoc claims
+        System.out.println("Task enqueue time (ms) = " + (task.getEnqueueTimestamp() / 1000));
+        if ((System.currentTimeMillis() - (task.getEnqueueTimestamp() / 1000))
               >= TASK_PROCESS_TIME_WINDOW_MS) {
           System.out.println("Dropping old task..");
           return;
