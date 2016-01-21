@@ -536,11 +536,13 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                         Uri uri = decodeURL(eventStream.getEncodedUrl());
                         Log.i(TAG, "Setting video path for position = " + position + " url = " + uri.toString());
 
-                        if (eventStream.getEncodedAlternateUrl() != null) {
+                        viewHolder.videoViewPath = eventStream.getEncodedUrl();
+                        // Use alternate stream (low quality) for live events. For non-live events,
+                        // the alternate stream will be destroyed and hence not available.
+                        if (isLiveEvent && eventStream.getEncodedAlternateUrl() != null) {
                             viewHolder.videoViewPath = eventStream.getEncodedAlternateUrl();
-                        } else {
-                            viewHolder.videoViewPath = eventStream.getEncodedUrl();
                         }
+
                         viewHolder.streamVideo.setVideoURI(uri);
                         viewHolder.streamVideo.setOnInfoListener(new MediaPlayer.OnInfoListener() {
                             @Override
