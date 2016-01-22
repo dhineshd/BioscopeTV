@@ -267,6 +267,8 @@ public class TaskQueueWorker {
       try {
           return leaseRequest.execute();
       } catch (Exception e) {
+          System.out.println("Failed to lease tasks. Ignoring..");
+          e.printStackTrace();
           return null;
       }
   }
