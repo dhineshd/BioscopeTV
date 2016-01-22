@@ -540,40 +540,47 @@ public class ListEventStreamsActivity extends AppCompatActivity {
                         Uri uri = decodeURL(eventStream.getEncodedUrl());
                         Log.i(TAG, "Setting video path for position = " + position + " url = " + uri.toString());
 
-                        viewHolder.videoViewPath = eventStream.getEncodedUrl();
+                        viewHolder.videoViewPath = "";
+
                         // Use alternate stream (low quality) for live events. For non-live events,
                         // the alternate stream will be destroyed and hence not available.
-                        if (isLiveEvent && eventStream.getEncodedAlternateUrl() != null) {
-                            viewHolder.videoViewPath = eventStream.getEncodedAlternateUrl();
+                        if (isLiveEvent) {
+                            if (eventStream.getEncodedAlternateUrl() != null) {
+                                viewHolder.videoViewPath = eventStream.getEncodedAlternateUrl();
+                            }
+                        } else {
+                            viewHolder.videoViewPath = eventStream.getEncodedUrl();
                         }
 
-                        viewHolder.streamVideo.setVideoURI(uri);
-                        viewHolder.streamVideo.setOnInfoListener(new MediaPlayer.OnInfoListener() {
-                            @Override
-                            public boolean onInfo(MediaPlayer mp, int what, int extra) {
-                                Log.i(TAG, "onInfo for position = " + position + " what = " + what);
-                                if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) {
-                                    viewHolder.progressBar.setVisibility(View.VISIBLE);
-                                } else if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
-                                    viewHolder.progressBar.setVisibility(View.INVISIBLE);
+                        if (!viewHolder.videoViewPath.isEmpty()) {
+                            viewHolder.streamVideo.setVideoURI(uri);
+                            viewHolder.streamVideo.setOnInfoListener(new MediaPlayer.OnInfoListener() {
+                                @Override
+                                public boolean onInfo(MediaPlayer mp, int what, int extra) {
+                                    Log.i(TAG, "onInfo for position = " + position + " what = " + what);
+                                    if (what == MediaPlayer.MEDIA_INFO_BUFFERING_START) {
+                                        viewHolder.progressBar.setVisibility(View.VISIBLE);
+                                    } else if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
+                                        viewHolder.progressBar.setVisibility(View.INVISIBLE);
+                                    }
+                                    return true;
                                 }
-                                return true;
-                            }
-                        });
-                        viewHolder.streamVideo.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                            @Override
-                            public void onPrepared(MediaPlayer mp) {
-                                Log.i(TAG, "Prepared mp for position = " + position);
-                                // No audio for list videos playback
-                                mp.setVolume(0f, 0f);
+                            });
+                            viewHolder.streamVideo.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                                @Override
+                                public void onPrepared(MediaPlayer mp) {
+                                    Log.i(TAG, "Prepared mp for position = " + position);
+                                    // No audio for list videos playback
+                                    mp.setVolume(0f, 0f);
 
-                                // For non-live events, we want to keep playing stream in a loop
-                                if (!isLiveEvent) {
-                                    mp.setLooping(true);
+                                    // For non-live events, we want to keep playing stream in a loop
+                                    if (!isLiveEvent) {
+                                        mp.setLooping(true);
+                                    }
                                 }
-                            }
-                        });
-                        viewHolder.streamVideo.start();
+                            });
+                            viewHolder.streamVideo.start();
+                        }
                     }
                     viewHolder.itemLayout.setBackground(null);
                 }
