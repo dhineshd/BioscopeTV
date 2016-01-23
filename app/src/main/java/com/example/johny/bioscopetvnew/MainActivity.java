@@ -80,9 +80,11 @@ public class MainActivity extends AppCompatActivity {
     private EventListAdapter nonLiveEventsAdapter;
     private Set<BroadcastEvent> liveEvents = new HashSet<>();
     private Set<BroadcastEvent> nonLiveEvents = new HashSet<>();
+    private Set<BroadcastEvent> totalReceivedEvents = new HashSet<>();
     private Executor eventStatusCheckExecutor = Executors.newSingleThreadExecutor();
     private Map<BroadcastEvent, Integer> eventLiveStreamCount = new HashMap<>();
     private ImageButton feedbackButton;
+    private TextView textviewNoLiveEvents;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -167,6 +169,7 @@ public class MainActivity extends AppCompatActivity {
                 displayActionChoicesToUser(liveEventsAdapter.getItem(position), true);
             }
         });
+        textviewNoLiveEvents = (TextView) findViewById(R.id.textview_no_live_events);
 
         // Non-live events
         ListView listViewNonLiveEvents = (ListView) findViewById(R.id.listview_non_live_events);
@@ -321,6 +324,12 @@ public class MainActivity extends AppCompatActivity {
     class ListEventsTask extends AsyncTask<Void, Void, List<BroadcastEvent>> {
 
         @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            totalReceivedEvents.clear();
+        }
+
+        @Override
         protected List<BroadcastEvent> doInBackground(Void... params) {
 
             try {
@@ -346,7 +355,8 @@ public class MainActivity extends AppCompatActivity {
                 if(event.getEventName() != null && event.getEventName().toLowerCase().startsWith(PRIVATE_EVENT_PREFIX) && !isAdmin()) {
                  Log.i(TAG, event.getEventName() + " is private!!; not showing event!");
                 } else {
-                    new ListEventStreamsTask(event).executeOnExecutor(eventStatusCheckExecutor);
+                    totalReceivedEvents.add(event);
+                    asyncTasks.add(new ListEventStreamsTask(event).executeOnExecutor(eventStatusCheckExecutor));
                 }
             }
 
@@ -386,6 +396,12 @@ public class MainActivity extends AppCompatActivity {
                 nonLiveEventsAdapter.remove(event);
                 liveEventsAdapter.add(event);
             }
+
+            // Wait until live status of all events have been determined to show empty message
+            if (totalReceivedEvents.size() == (liveEventsAdapter.getCount() + nonLiveEventsAdapter.getCount())) {
+                textviewNoLiveEvents.setVisibility(liveEventsAdapter.isEmpty()? View.VISIBLE : View.INVISIBLE);
+            }
+
         }
     }
 

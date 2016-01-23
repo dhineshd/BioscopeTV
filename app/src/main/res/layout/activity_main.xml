@@ -48,11 +48,26 @@
 
         </LinearLayout>
 
-        <ListView
+        <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@id/linearlayout_live_events_bar"
-            android:id="@+id/listview_live_events" />
+            android:layout_below="@id/linearlayout_live_events_bar">
+
+            <ListView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/listview_live_events" />
+
+            <TextView android:id="@+id/textview_no_live_events"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="No live events"
+                android:visibility="invisible"
+                android:textSize="15sp"
+                android:padding="10dp"
+                android:textColor="@android:color/white"/>
+
+        </RelativeLayout>
 
     </RelativeLayout>
 
