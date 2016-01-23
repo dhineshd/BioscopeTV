@@ -42,7 +42,7 @@ import javax.inject.Named;
   )
 )
 public class MyEndpoint {
-    private static final int MAX_EVENTS_TO_LIST = 5;
+    private static final int MAX_EVENTS_TO_LIST = 10;
     private static final int MAX_EVENT_STREAMS_TO_LIST = 5;
     private static final long MAX_ACCEPTABLE_STALENESS_FOR_LIVE_STREAM_MS = 60000;
     private static final long MAX_ACCEPTABLE_STALENESS_FOR_EVENT_STATS_MS = 30000;
