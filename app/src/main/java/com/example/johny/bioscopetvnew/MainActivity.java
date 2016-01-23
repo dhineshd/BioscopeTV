@@ -47,7 +47,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 
 import io.kickflip.sdk.Kickflip;
 import lombok.AllArgsConstructor;
@@ -81,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
     private Set<BroadcastEvent> liveEvents = new HashSet<>();
     private Set<BroadcastEvent> nonLiveEvents = new HashSet<>();
     private Set<BroadcastEvent> totalReceivedEvents = new HashSet<>();
-    private Executor eventStatusCheckExecutor = Executors.newSingleThreadExecutor();
+    private Executor eventStatusCheckExecutor = AsyncTask.THREAD_POOL_EXECUTOR;
     private Map<BroadcastEvent, Integer> eventLiveStreamCount = new HashMap<>();
     private ImageButton feedbackButton;
     private TextView textviewNoLiveEvents;
